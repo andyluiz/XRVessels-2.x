@@ -1,5 +1,5 @@
-# XR Vessels
-XR Series vessel add-ons for Orbiter Space Flight Simulator
+# XR Vessels 2.x
+XR 2.x Series vessel add-ons for Orbiter Space Flight Simulator
 
 ## License
 
