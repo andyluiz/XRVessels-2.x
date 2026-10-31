@@ -29,6 +29,7 @@
 // ==============================================================
 
 #include "Area.h"
+#include "XRResources.h"
 
 // Constructor
 // Note: default for m_vcPanelTextureID = -1, which means "none"
@@ -61,8 +62,8 @@ RECT Area::GetRectForSize(const int sizeX, const int sizeY)
 // Load a bitmap resource and return an Orbiter surface handle.  
 SURFHANDLE Area::CreateSurface(const int resourceID) const
 {
-    const HINSTANCE hDLL = GetVessel().GetModuleHandle();
-    return oapiCreateSurface(LoadBitmap(hDLL, MAKEINTRESOURCE (resourceID)));
+    const auto hDLL = GetVessel().GetModuleHandle();
+    return oapiCreateSurface(XRLoadBitmap(hDLL, resourceID));
 }
 
 // Destroy (free) an Orbiter surface and set the variable containing the surface value to 0
@@ -158,5 +159,8 @@ HDC Area::GetDC(const SURFHANDLE surf)
 // replaces oapiReleaseDC
 void Area::ReleaseDC(const SURFHANDLE surf, const HDC hDC)
 {
+#ifndef _WIN32
+    xrqt::release(hDC);
+#endif
     oapiReleaseDC(surf, hDC);
 }

@@ -38,6 +38,7 @@
 #include "XRPayload.h"
 #include "XRPayloadBaySlot.h"
 
+#ifdef _WIN32
 // static font handles
 HFONT XR1PayloadDialog::s_hOrgFont;      // normal button font handle
 HFONT XR1PayloadDialog::s_hBoldFont;     // bold button font handle
@@ -479,3 +480,4 @@ void XR1PayloadDialog::ProcessSelectedPayloadChanged(HWND hDlg, DeltaGliderXR1 *
         RescanBayAndUpdateButtonStates(hDlg, pXR1);
     }
 }
+#endif

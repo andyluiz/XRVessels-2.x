@@ -13,6 +13,32 @@ Refer to the [XR Flight Operations Manual](./XRVessels/XR%20Flight%20Operations%
 
 You do not need to build the XR vessels in order to use them with Orbiter. However, if you want to build the XR vessels from the source, follow the steps below. These instructions assume you are building both the 32-bit and 64-bit versions. However, you may build only one version if you prefer.
 
+### Native Linux port (in progress)
+
+The root `CMakeLists.txt` configures C++17 module targets for XR2 Ravenstar and XR5 Vanguard against a built native Linux Orbiter SDK:
+
+```sh
+cmake -S . -B build -DORBITER_SOURCE_DIR=/path/to/orbiter -DORBITER_BUILD_DIR=/path/to/orbiter-build
+cmake --build build --target XR2Ravenstar XR5Vanguard
+```
+
+The native components can be tested independently while the full vessel port is in progress:
+
+```sh
+cmake --build build --target xr_window_position_test xr_textbox_test xr_render_window_test xr_module_flag_test xr_control_dialog_test xr_qt_drawing_test xr_template_cleanup_test
+ctest --test-dir build --output-on-failure
+```
+
+**Both Linux targets compile and link.** The output modules are `build/Modules/XR2Ravenstar.so` and `build/Modules/XR5Vanguard.so`. Their unresolved host references were checked against the configured Linux Orbiter executable; all are exported by that executable. All seven native component tests pass, including Qt drawing and typed cache cleanup.
+
+The Linux build converts both vessels' `.rc` files with Orbiter's resource converter and links Qt Widgets. It uses native file enumeration, bitmap loading, window-position persistence, Qt-backed panel text/drawing, module-owned XR vessel detection without RTTI, and Qt control/payload/scenario-editor dialogs. The Windows paths remain available under `_WIN32`, but were not rebuilt here.
+
+**Build success is not flight validation:** the modules and new dialogs have not been tested inside Orbiter. On Wayland, a compositor may ignore `QWindow::setPosition()` requests. The XR2 mesh and textures are not in this repository and have separate distribution restrictions; compiling the code alone will not make XR2 flyable. This build does not install or package the required vessel assets.
+
+On Linux, the window coordinates are stored in `Config/XRWindowPosition.ini` in the Orbiter root directory (not in the registry). To prevent restoring a saved position, add `DisableWindowPosRestore=1` under `[General]` in that file. Windows continues to use its existing registry settings.
+
+### Windows build
+
 1. Install Visual Studio 2019 from https://visualstudio.microsoft.com/downloads/.
 3. Download and install (or build) OpenOrbiter from https://github.com/mschweiger/orbiter.
 4. Clone the XRVessels repository from GitHub to your local machine with:

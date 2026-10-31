@@ -277,6 +277,7 @@ void SetSlopePostStep::clbkPrePostStep(const double simt, const double simdt, co
     // over time vary, which would make accuracy (and lag) dependent on the framerate.  So we sync at 60 fps instead (see m_refreshRate value).
     if (m_isNextUpdateTimeValid && (simt >= m_nextUpdateTime))
     {
+		{
 		const double groundspeed = GetVessel().GetGroundspeed();
 
         const double timeDeltaSinceLastUpdate = simt - m_lastUpdateTime;
@@ -302,6 +303,7 @@ void SetSlopePostStep::clbkPrePostStep(const double simt, const double simdt, co
         GetXR1().m_slope = atan(a / b);     // slope in radians
         // DEBUG: sprintf(oapiDebugString(), "a=%0.4lf, b=%0.4lf, c=%0.4lf, slope=%lf, velocity=%lf, timeDeltaSinceLastUpdate=%lf", a, b, c, GetXR1().m_slope * DEG, airspeed, timeDeltaSinceLastUpdate);
 
+		}
 reset:
         // reset for next sample
         m_nextUpdateTime        = simt + m_refreshRate;

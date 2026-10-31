@@ -30,7 +30,9 @@
 #include "PropType.h"  // for enum
 #include <unordered_map>
 
+#ifdef _WIN32
 using namespace stdext;
+#endif
 
 // dummy vessel classname
 #define XRPAYLOAD_BAY_CLASSNAME  "XRPayloadBay"

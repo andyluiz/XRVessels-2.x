@@ -160,7 +160,7 @@ bool SelectPayloadSlotArea::Redraw2D(const int event, const SURFHANDLE surf)
             else    // it's slot 3 
                 slotY = 5;
 
-            COORD2 &slot = _COORD2(12, slotY);  // upper-left corder of slot where line border starts
+            COORD2 slot = _COORD2(12, slotY);  // upper-left corner of slot where line border starts
 
             // draw the line around the inside of the border
             // Note: the 3 and 4 in the following lines is necessary for the 3 and 4 grid pixel lines that separate columns and rows, respectively.
@@ -239,4 +239,3 @@ bool SelectPayloadSlotArea::ProcessMouseEvent(const int event, const int mx, con
 
     return false;
 }
-

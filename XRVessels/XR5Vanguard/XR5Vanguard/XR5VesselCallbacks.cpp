@@ -25,6 +25,10 @@
 
 #include "XR5Vanguard.h"
 #include "XR5AreaIDs.h"  
+#ifndef _WIN32
+#include <strings.h>
+#define _stricmp strcasecmp
+#endif
 
 // --------------------------------------------------------------
 // Respond to playback event
@@ -152,5 +156,4 @@ bool XR5Vanguard::clbkPanelRedrawEvent(int areaID, int event, SURFHANDLE surf)
     // redraw is OK: invoke the superclass to dispatch the redraw event
     return DeltaGliderXR1::clbkPanelRedrawEvent(areaID, event, surf);
 }
-
 

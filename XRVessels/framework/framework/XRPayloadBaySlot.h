@@ -31,7 +31,9 @@
 #include <unordered_map>
 #include <vector>
 
+#ifdef _WIN32
 using namespace stdext;
+#endif
 
 class XRPayloadBaySlot;
 

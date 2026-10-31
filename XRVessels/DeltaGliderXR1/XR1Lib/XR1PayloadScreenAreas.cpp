@@ -155,8 +155,8 @@ bool DeployPayloadArea::Redraw2D(const int event, const SURFHANDLE surf)
 
         // SLOTS OCCUPIED
         textY += pitch;
-        VECTOR3 slots = pChildVesselPCD->GetSlotsOccupied();  
-        sprintf(msg, "%.1f L x %.1f W x %.1f H", slots.z, slots.x, slots.y); 
+        VECTOR3 occupiedSlots = pChildVesselPCD->GetSlotsOccupied();
+        sprintf(msg, "%.1f L x %.1f W x %.1f H", occupiedSlots.z, occupiedSlots.x, occupiedSlots.y);
         TextOut(hDC, 98, textY, msg, static_cast<int>(strlen(msg)));
     }
     else
@@ -167,7 +167,7 @@ bool DeployPayloadArea::Redraw2D(const int event, const SURFHANDLE surf)
     if (pChildVessel != nullptr)
     {
         SetTextColor(hDC, MEDIUM_GREEN);
-        _itoa(GetXR1().m_selectedSlot, msg, 10);
+        sprintf(msg, "%d", GetXR1().m_selectedSlot);
     }
     else
     {
@@ -461,7 +461,7 @@ bool PayloadThumbnailArea::Redraw2D(const int event, const SURFHANDLE surf)
     {
         if (pChildVesselPCD != nullptr)
         {
-            const HBITMAP hThumb = pChildVesselPCD->GetThumbnailBitmapHandle();  // may be null, but normally should not be
+            const XRBitmap hThumb = pChildVesselPCD->GetThumbnailBitmapHandle();  // may be null, but normally should not be
             if (hThumb == nullptr)
             {
                 // render a black screen so the user knows his thumbnail path is invalid
@@ -474,10 +474,15 @@ bool PayloadThumbnailArea::Redraw2D(const int event, const SURFHANDLE surf)
                 // obtain device context and save existing object
                 HDC hDC = GetDC(surf);
                 
+#ifdef _WIN32
                 HDC hMemDC = CreateCompatibleDC(hDC);   // create an in-memory DC
                 SelectObject(hMemDC, hThumb);  // select the bitmap image into the in-memory DC
                 BitBlt(hDC, 0, 0, s_screenSize.x, s_screenSize.y, hMemDC, 0, 0, SRCCOPY);  // copy new bitmap to the screen
                 DeleteDC(hMemDC);       // clean up
+#else
+                hDC->drawImage(QRect(0, 0, s_screenSize.x, s_screenSize.y), *hThumb,
+                               QRect(0, 0, s_screenSize.x, s_screenSize.y));
+#endif
 
                 // release device context
                 ReleaseDC(surf, hDC);
@@ -633,8 +638,8 @@ bool GrapplePayloadArea::Redraw2D(const int event, const SURFHANDLE surf)
 
         // SLOTS OCCUPIED
         textY += pitch;
-        VECTOR3 slots = grappleTargetPCD.GetSlotsOccupied();  
-        sprintf(msg, "%.1f L x %.1f W x %.1f H", slots.z, slots.x, slots.y); 
+        VECTOR3 occupiedSlots = grappleTargetPCD.GetSlotsOccupied();
+        sprintf(msg, "%.1f L x %.1f W x %.1f H", occupiedSlots.z, occupiedSlots.x, occupiedSlots.y);
         TextOut(hDC, 98, textY, msg, static_cast<int>(strlen(msg)));
     }
     else

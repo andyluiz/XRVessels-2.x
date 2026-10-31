@@ -134,8 +134,8 @@ protected:
     COLORREF m_colorRef;
     COLORREF m_bgColorRef;
     COLORREF m_hlColorRef;
-    HPEN m_pen0;
-    HBRUSH m_hBackgroundBrush;
+    XRPanelPen m_pen0;
+    XRPanelBrush m_hBackgroundBrush;
     TextBox *m_pTextBox;    // may be null
     int m_lastRenderedTopYCoordinate;
 

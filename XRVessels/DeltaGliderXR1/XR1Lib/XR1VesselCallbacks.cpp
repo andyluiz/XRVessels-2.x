@@ -30,6 +30,10 @@
 #include "AreaIDs.h"
 #include "XR1PayloadDialog.h"
 #include "XR1HUD.h"
+#ifndef _WIN32
+#include <strings.h>
+#define _stricmp strcasecmp
+#endif
 
 // ==============================================================
 // Overloaded callback functions
@@ -167,7 +171,11 @@ void DeltaGliderXR1::clbkFocusChanged(bool getfocus, OBJHANDLE hNewVessel, OBJHA
         {
             // editor is open: close it
             // do not beep here; this is automatic
+#ifdef _WIN32
             ::SendMessage(s_hPayloadEditorDialog, WM_TERMINATE, 0, reinterpret_cast<LPARAM>(this));
+#else
+            XR1PayloadDialog::CloseDialog(s_hPayloadEditorDialog);
+#endif
             s_hPayloadEditorDialog = 0;
         }
     }

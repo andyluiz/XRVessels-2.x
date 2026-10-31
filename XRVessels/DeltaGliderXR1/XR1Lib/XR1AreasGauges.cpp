@@ -299,15 +299,25 @@ void AnalogGaugeArea::Activate()
     }
     m_lastIndicatorAngle = m_initialAngle;
 
+#ifdef _WIN32
     m_pen0 = CreatePen(PS_SOLID, 1, RGB(224, 224, 224));
     m_pen1 = CreatePen(PS_SOLID, 3, RGB(164, 164, 164));
+#else
+    m_pen0 = new QPen(QColor(224, 224, 224), 1);
+    m_pen1 = new QPen(QColor(164, 164, 164), 3);
+#endif
 }
 
 void AnalogGaugeArea::Deactivate()
 {
     // clean up our resources
+#ifdef _WIN32
     DeleteObject(m_pen0);
     DeleteObject(m_pen1);
+#else
+    delete m_pen0;
+    delete m_pen1;
+#endif
 
     XR1Area::Deactivate();  // let superclass clean up
 }
@@ -350,6 +360,7 @@ void AnalogGaugeArea::DrawNeedle(HDC hDC, int x, int y, double rad, double angle
     m_lastIndicatorAngle = angle;
 
     double dx = rad * cos(angle), dy = rad * sin(angle);
+#ifdef _WIN32
     HGDIOBJ oldObject = SelectObject(hDC, m_pen1);
     MoveToEx(hDC, x, y, 0);
     LineTo(hDC, x + static_cast<int>(0.85 * dx + 0.5), y - static_cast<int>(0.85 * dy + 0.5));
@@ -359,6 +370,14 @@ void AnalogGaugeArea::DrawNeedle(HDC hDC, int x, int y, double rad, double angle
     LineTo(hDC, x + static_cast<int>(dx + 0.5), y - static_cast<int>(dy + 0.5));
 
     SelectObject(hDC, oldObject);    // clean up
+#else
+    hDC->save();
+    hDC->setPen(*m_pen1);
+    hDC->drawLine(x, y, x + static_cast<int>(0.85 * dx + 0.5), y - static_cast<int>(0.85 * dy + 0.5));
+    hDC->setPen(*m_pen0);
+    hDC->drawLine(x, y, x + static_cast<int>(dx + 0.5), y - static_cast<int>(dy + 0.5));
+    hDC->restore();
+#endif
 }
 
 //----------------------------------------------------------------------------------

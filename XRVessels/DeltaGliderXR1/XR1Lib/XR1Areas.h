@@ -34,6 +34,7 @@
 #include "vessel3ext.h"
 #include "Area.h"
 #include "XR1Colors.h"
+#include "XRPanelPen.h"
 
 class DeltaGliderXR1;
 
@@ -54,7 +55,7 @@ public:
     DeltaGliderXR1 &GetXR1() const { return static_cast<DeltaGliderXR1 &>(GetVessel()); }
 
     // utility methods
-    COLORREF XR1Area::GetTempCREF(const double tempK, double limitK, const DoorStatus doorStatus) const;
+    COLORREF GetTempCREF(const double tempK, double limitK, const DoorStatus doorStatus) const;
     COLORREF GetValueCREF(double value, double warningLimit, double criticalLimit) const;
 
     // static worker methods to convert values
@@ -364,7 +365,7 @@ protected:
     // data
     double m_initialAngle;        // angle on initial render, in radians
     double m_lastIndicatorAngle;  // angle in radians
-    HPEN m_pen0, m_pen1;
+    XRPanelPen m_pen0, m_pen1;
 };
 
 //----------------------------------------------------------------------------------

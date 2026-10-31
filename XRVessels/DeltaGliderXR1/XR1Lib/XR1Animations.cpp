@@ -28,7 +28,11 @@
 // ==============================================================
 
 #include "DeltaGliderXR1.h"
+#ifdef _WIN32
 #include "meshres.h"
+#else
+#include "../DeltaGliderXR1/meshres.h"  // XR1 animation groups, not the subclass mesh
+#endif
 
 // Virtual Gateway method that decides which animations are valid for this vessel; if the incoming animation handle is valid, 
 // the call is propogated up to SetAnimation.  Otherwise, this method returns without changing the animation state.

@@ -270,7 +270,6 @@ void XR5Vanguard::CreatePayloadBay()
     //
     // Create our dummy bay vessel attachment point; we want this to be FIRST so that the payload bay slot
     // indices begin a 1 in the scenario file; i.e., the numbers will match the slots.
-    VECTOR3 &attachVector = _V(0, 3.766, -23.537);
+    VECTOR3 attachVector = _V(0, 3.766, -23.537);
     m_dummyAttachmentPoint = CreateAttachment(false, attachVector, _V(0, -1.0, 0), _V(0, 0, 1.0), "XRDUMMY");
 }
-

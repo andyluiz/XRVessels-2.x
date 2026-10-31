@@ -30,7 +30,11 @@
 #pragma once
 
 #define _CRT_SECURE_NO_DEPRECATE
-#include "windows.h"
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include "OrbiterPlatform.h"
+#endif
 #include <vector>
 #include "VesselConfigFileParser.h"
 #include "SecondaryHUDData.h"
@@ -279,4 +283,3 @@ protected:
 
     vector<const Cheatcode *> m_cheatcodeVector; // list of all parsed Cheatcode objects; may be empty
 };
-

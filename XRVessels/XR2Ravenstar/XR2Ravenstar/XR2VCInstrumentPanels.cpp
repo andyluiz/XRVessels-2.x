@@ -26,7 +26,7 @@
 // Custom instrument panels for the XR2
 // ==============================================================
 
-#include "OrbiterSDK.h"
+#include "Orbitersdk.h"
 #include "resource.h"
 #include "XR2AreaIDs.h"
 
@@ -505,4 +505,3 @@ bool XR2VCPassenger12InstrumentPanel::Activate()
     // invoke the superclass to activate all VC areas
     return XR2VCInstrumentPanel::Activate();
 }
-

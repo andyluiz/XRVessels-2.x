@@ -42,7 +42,7 @@
 #include "UMmuSDK.h"
 #endif
 
-#include <atlstr.h>
+#include "XRString.h"
 
 // Forward references
 class MultiDisplayArea;
@@ -146,7 +146,7 @@ public:
     virtual void clbkDockEvent(int dock, OBJHANDLE mate);
     
     virtual bool clbkLoadVC(int id);
-    virtual void UpdateCtrlDialog (DeltaGliderXR1 *dg, HWND hWnd = nullptr);
+    virtual void UpdateCtrlDialog (DeltaGliderXR1 *dg, XRDialogHandle hWnd = nullptr);
 
     // remaining callback methods are implemented by our base class, VESSEL3_EXT
 
@@ -1038,7 +1038,7 @@ public:
     XRPayloadBay *m_pPayloadBay;
     double m_nextPayloadScreensRefresh[3];  // simt of next refresh for our three screens
     vector<const XRGrappleTargetVessel *> m_xrGrappleTargetVesselsInDisplayRange;   // list of XRGrappleTargetVessel objects; may be empty
-    static HWND s_hPayloadEditorDialog;     // if non-zero, contains the window handle of the payload editor dialog; this is GLOBAL across all Ravenstar vessels since the dialog is a singleton
+    static XRDialogHandle s_hPayloadEditorDialog;     // if non-zero, contains the payload editor dialog; this is GLOBAL across all Ravenstar vessels since the dialog is a singleton
     // subclass bay doors, if any; these are not referenced by our class here
     UINT anim_bay;
     DoorStatus bay_status;
@@ -1129,4 +1129,3 @@ struct DoorSound
     bool processAPUTransitionState;     // true if we are armed to process an APU OFF transition
     const char *pLabel;                 // "Nosecone", "Retro Doors", etc.
 };
-

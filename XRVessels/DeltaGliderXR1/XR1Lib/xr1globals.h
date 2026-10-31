@@ -30,6 +30,8 @@
 #pragma once
 
 #include "orbitersdk.h"
+#include "XRModuleHandle.h"
+#include "XRControlDialog.h"
 
 class DeltaGliderXR1;
 
@@ -225,7 +227,7 @@ extern const char *ALL_SYSTEMS_NOMINAL_MSG;
 //
 // Globals
 //
-extern HMODULE g_hDLL;
+extern XRModuleHandle g_hDLL;
 
 // Global enum; NOT_SET is only used by GearCalloutsPostStep
 enum class DoorStatus { NOT_SET = -2, DOOR_FAILED, DOOR_CLOSED, DOOR_OPEN, DOOR_CLOSING, DOOR_OPENING };
@@ -413,7 +415,11 @@ struct HullTemperatureLimits
 // ==============================================================
 // Global callback prototypes 
 
+#ifdef _WIN32
 INT_PTR CALLBACK XR1Ctrl_DlgProc(HWND, UINT, WPARAM, LPARAM);
+#else
+void XR1Ctrl_DlgProc(QWidget *, void *);
+#endif
 
 // callout globals
 extern const double V1_CALLOUT_AIRSPEED;

@@ -28,10 +28,14 @@
 
 #define _CRT_SECURE_NO_DEPRECATE
 
+#ifdef _WIN32
 #include <Windows.h>
+#else
+#include "Orbitersdk.h"
+#endif
 #include <stdio.h>
 
-#include <atlstr.h>		// for CString
+#include "XRString.h"
 #include <fstream>      // for ifstream
 
 const int MAX_LINE_LENGTH = 1024;
@@ -79,7 +83,11 @@ public:
         if (!pFilename || !*pFilename)
             return false;
 
+#ifdef _WIN32
         std::ifstream file(pFilename);
+#else
+        std::ifstream file(oapiResolvePath(pFilename));
+#endif
         return file.good();
     }
 

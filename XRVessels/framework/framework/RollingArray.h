@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include <crtdbg.h>   // for _ASSERTE
+#include "XRAssert.h"
 
 class RollingArray
 {

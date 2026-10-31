@@ -35,9 +35,17 @@
 
 #include "ConfigFileParser.h"
 
+#ifdef _WIN32
 #include <Shlwapi.h>   // for PathFileExists
+#else
+#include <QMessageBox>
+#include <cerrno>
+#include <chrono>
+#include <ctime>
+#include <strings.h>
+#endif
 #include <string.h>
-#include <atlstr.h>
+#include "XRString.h"
 
 // Constructor
 // pDefaultFilename = path to default config file; may be relative to Orbiter root or absolute
@@ -50,12 +58,20 @@ ConfigFileParser::ConfigFileParser(const char *pDefaultFilename, const char *pLo
     if (pLogFilename != nullptr)
     {
         // open the log file in APPEND and SHARED mode so we can share it between multiple ship instances
+#ifdef _WIN32
         m_pLogFile = fopen(pLogFilename, "a+t");
+#else
+        m_pLogFile = fopen(oapiResolvePath(pLogFilename).c_str(), "a+t");
+#endif
         if (m_pLogFile == nullptr)
         {
             char temp[256];
             sprintf(temp, "Error opening log file '%s' for writing; attempting to continue", pLogFilename);
+#ifdef _WIN32
             MessageBox(nullptr, temp, "XR Framework Warning", MB_OK | MB_SETFOREGROUND);
+#else
+            QMessageBox::warning(nullptr, "XR Framework Warning", temp);
+#endif
         }
     }
 }
@@ -64,7 +80,7 @@ ConfigFileParser::ConfigFileParser(const char *pDefaultFilename, const char *pLo
 ConfigFileParser::~ConfigFileParser()
 {
     // clean up and close our logfile
-    fclose(m_pLogFile);
+    if (m_pLogFile) fclose(m_pLogFile);
 }
 
 //
@@ -80,7 +96,11 @@ bool ConfigFileParser::ParseFile(const char *pFilename)
     if (pFilename == nullptr)
         pFilename = GetDefaultFilename();
 
-    const bool bParsingOverrideFile = (_stricmp(pFilename, GetDefaultFilename()) != 0);  // true if we are parsing an override file
+#ifdef _WIN32
+    const bool bParsingOverrideFile = (_stricmp(pFilename, GetDefaultFilename()) != 0);
+#else
+    const bool bParsingOverrideFile = (strcasecmp(pFilename, GetDefaultFilename()) != 0);
+#endif
 
     static char temp[256]; // reused for messages
 
@@ -88,11 +108,19 @@ bool ConfigFileParser::ParseFile(const char *pFilename)
     sprintf(temp, "Parsing config file '%s'", pFilename);
     WriteLog(temp);
 
+#ifdef _WIN32
     FILE *pFile = fopen(pFilename, "rt");
+#else
+    FILE *pFile = fopen(oapiResolvePath(pFilename).c_str(), "rt");
+#endif
 
     if (pFile == nullptr)
     {
+#ifdef _WIN32
         sprintf(temp, "ERROR: fopen failed for '%s'; GetLastError=0x%X", pFilename, GetLastError());
+#else
+        snprintf(temp, sizeof(temp), "ERROR: fopen failed for '%s'; errno=%d", pFilename, errno);
+#endif
         WriteLog(temp);
         m_parseFailed = true;
         return false;       // could not open file
@@ -285,20 +313,34 @@ void ConfigFileParser::WriteLog(const char *pMsg) const
 
     CStringA csMsg;
     // get and format the current time
-    SYSTEMTIME st;
-    GetLocalTime(&st);
     CString csPrefix;
     if (!GetLogPrefix().IsEmpty())
         csPrefix.Format("[%s] ", static_cast<const char *>(GetLogPrefix()));
 
-    csMsg.Format("%02d.%02d.%04d %02d:%02d:%02d.%03d - %s%s\n", 
+#ifdef _WIN32
+    SYSTEMTIME st;
+    GetLocalTime(&st);
+    csMsg.Format("%02d.%02d.%04d %02d:%02d:%02d.%03d - %s%s\n",
         st.wMonth, st.wDay, st.wYear, 
         st.wHour, st.wMinute, st.wSecond, st.wMilliseconds,
         static_cast<const char *>(csPrefix), pMsg);
+#else
+    const auto now = std::chrono::system_clock::now();
+    const auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count() % 1000;
+    const std::time_t timestamp = std::chrono::system_clock::to_time_t(now);
+    std::tm local;
+    localtime_r(&timestamp, &local);
+    csMsg.Format("%02d.%02d.%04d %02d:%02d:%02d.%03d - %s%s\n",
+        local.tm_mon + 1, local.tm_mday, local.tm_year + 1900,
+        local.tm_hour, local.tm_min, local.tm_sec, static_cast<int>(milliseconds),
+        static_cast<const char *>(csPrefix), pMsg);
+#endif
 
     // no point in checking for error here
+#ifdef _WIN32
     OutputDebugString(csMsg);   // send to debug console
-    fwrite(csMsg, 1, csMsg.GetLength(), m_pLogFile);
+#endif
+    fwrite(static_cast<const char *>(csMsg), 1, csMsg.GetLength(), m_pLogFile);
 
     // flush to disk in case we crash or are terminated
     fflush(m_pLogFile);
@@ -369,4 +411,3 @@ bool ConfigFileParser::ValidateFloat(const float value, const float min, const f
 
     return retVal;
 }
-

@@ -26,6 +26,13 @@
 
 #include "FileList.h"
 #include "Orbitersdk.h"   // for oapiRand
+#include <cassert>
+#ifndef _WIN32
+#include <QFileInfo>
+#include <cstring>
+#include <strings.h>
+#define _stricmp strcasecmp
+#endif
 
 // Convenience constructor for when you want to accept all file types
 FileList::FileList(const char *pRootPath, const bool bRecurseSubfolders) :
@@ -66,11 +73,12 @@ FileList::~FileList()
 // Note: recursionLevel is just here for debugging purposes
 void FileList::Scan(const char *pPath, const int recursionLevel)
 {
-    _ASSERTE(pPath);
-    _ASSERTE(*pPath);
+    assert(pPath);
+    assert(*pPath);
 
     // This code was broken out from XRPayloadClassData::InitializeXRPayloadClassData().
 
+#ifdef _WIN32
     WIN32_FIND_DATA findFileData;
     char pConfigFilespecWildcard[MAX_PATH];
     sprintf_s(pConfigFilespecWildcard, "%s\\*", pPath);  // iterate through all files and directories
@@ -121,6 +129,36 @@ void FileList::Scan(const char *pPath, const int recursionLevel)
         }
     }  // for (;;)
     FindClose(hFind);
+#else
+    const QDir directory(QString::fromStdString(oapiResolvePath(pPath)));
+    const auto entries = directory.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::NoSymLinks);
+    for (const QFileInfo &entry : entries)
+    {
+        const QByteArray name = entry.fileName().toUtf8();
+        if (name.isEmpty() || name.size() >= MAX_PATH || name.startsWith('.'))
+            continue;
+
+        WIN32_FIND_DATA fileData{};
+        std::memcpy(fileData.cFileName, name.constData(), static_cast<size_t>(name.size()) + 1);
+        fileData.dwFileAttributes = entry.isDir() ? FILE_ATTRIBUTE_DIRECTORY : 0;
+        const quint64 size = static_cast<quint64>(entry.size());
+        fileData.nFileSizeHigh = static_cast<DWORD>(size >> 32);
+        fileData.nFileSizeLow = static_cast<DWORD>(size);
+
+        // Keep the callback's Orbiter-relative backslash paths; XRPayload.cpp
+        // derives vessel class names by stripping "Config\\Vessels\\".
+        const std::string path = std::string(pPath) + "\\" + name.constData();
+        if (path.size() >= MAX_PATH || !clbkFilterNode(path.c_str(), fileData))
+            continue;
+        if (entry.isDir())
+            Scan(path.c_str(), recursionLevel + 1);
+        else if (size != 0)
+        {
+            m_allFiles.emplace_back(path);
+            clbkProcessFile(path.c_str(), fileData);
+        }
+    }
+#endif
 }
 
 // Invoked for each file or folder node found.  The default method here looks at bRecurseSubfolders (for folder nodes) and
@@ -203,8 +241,8 @@ const CString FileList::GetFile(const int index) const
 // Returns the first file in our file list with the specified basename (case-insensitive search), or nullptr if no file found.
 const CString *FileList::FindFileWithBasename(const char *pBasename) const
 {
-    _ASSERTE(pBasename);
-    _ASSERTE(*pBasename);
+    assert(pBasename);
+    assert(*pBasename);
 
     const CString *pRetVal = nullptr;
     if (pBasename && *pBasename)
@@ -242,4 +280,3 @@ const CString *FileList::FindFileWithBasename(const char *pBasename) const
 
     return nullptr;
 }
-

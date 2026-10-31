@@ -28,29 +28,50 @@
 #include "XRPayloadBay.h"
 #include "XR1PayloadDialog.h"
 #include "XR1Areas.h"
+#ifndef _WIN32
+#include "XRWindowPositionFile.h"
+#include <QMessageBox>
+#endif
 
 // save the current Orbiter window coordinates; this is invoked when Orbiter exits or saves a scenario
 void DeltaGliderXR1::SaveOrbiterRenderWindowPosition()
 {
-	// save the Orbiter render coordinates to the registry
-	const HWND hOrbiterWnd = GetOrbiterRenderWindowHandle();
+	// save the Orbiter render coordinates
+	const auto hOrbiterWnd = GetOrbiterRenderWindowHandle();
 	if (hOrbiterWnd)    // will only be nullptr for full-screen mode
 	{
 		// Get window coordinates
+		#ifdef _WIN32
 		RECT rect;
-		if (::GetWindowRect(hOrbiterWnd, &rect))
+		if (!::GetWindowRect(hOrbiterWnd, &rect)) return;
+		const int x = rect.left;
+		const int y = rect.top;
+		#else
+		// Store and restore the same client-area position on Qt; unlike
+		// Win32's GetWindowRect, QWindow::position excludes the frame.
+		const QPoint position = hOrbiterWnd->position();
+		const int x = position.x();
+		const int y = position.y();
+		#endif
+		// Save window coordinates for this video size
+		#ifdef _WIN32
+		CString xCoordValName, yCoordValName;
+		xCoordValName.Format("x_window_coord_%u", GetVideoWindowWidth());
+		yCoordValName.Format("y_window_coord_%u", GetVideoWindowHeight());
+		m_regKeyManager.WriteRegistryDWORD(xCoordValName, static_cast<DWORD>(x));
+		m_regKeyManager.WriteRegistryDWORD(yCoordValName, static_cast<DWORD>(y));
+		#else
+		XRWindowPositionFile positions(QString::fromStdString(oapiResolvePath("Config/XRWindowPosition.ini")));
+		if (!positions.Save(GetVideoWindowWidth(), GetVideoWindowHeight(), QPoint(x, y)))
 		{
-			// Get saved window coordinates
-			CString xCoordValName, yCoordValName;
-			xCoordValName.Format("x_window_coord_%u", GetVideoWindowWidth());
-			yCoordValName.Format("y_window_coord_%u", GetVideoWindowHeight());
-			m_regKeyManager.WriteRegistryDWORD(xCoordValName, rect.left);
-			m_regKeyManager.WriteRegistryDWORD(yCoordValName, rect.top);
-
-			char msg[256];
-			sprintf(msg, "Saved Orbiter window coordinates x=%d, y=%d", rect.left, rect.top);   // NOTE: these are actually *signed* numbers since the coordinates can go negative with dual monitors.
-			m_pConfig->WriteLog(msg);
+			m_pConfig->WriteLog("Unable to save Config/XRWindowPosition.ini");
+			return;
 		}
+		#endif
+
+		char msg[256];
+		sprintf(msg, "Saved Orbiter window coordinates x=%d, y=%d", x, y);   // NOTE: these are actually *signed* numbers since the coordinates can go negative with dual monitors.
+		m_pConfig->WriteLog(msg);
 	}
 }
 
@@ -60,26 +81,42 @@ void DeltaGliderXR1::RestoreOrbiterRenderWindowPosition()
 	static bool s_isFirstRun = true;		// process-wide singleton
 
 	// Restore the render window coordinates
-	const HWND hOrbiterWnd = GetOrbiterRenderWindowHandle();
+	const auto hOrbiterWnd = GetOrbiterRenderWindowHandle();
 	if (hOrbiterWnd)    // will only be nullptr for full-screen mode
 	{
 		// See if the restoring Orbiter window coordinates is allowed
+		#ifdef _WIN32
 		DWORD dwDisableWindowPosRestore = 0;
 		m_regKeyManager.ReadRegistryDWORD("DisableWindowPosRestore", dwDisableWindowPosRestore);
+		const bool disableWindowPosRestore = (dwDisableWindowPosRestore != 0);
+		#else
+		XRWindowPositionFile positions(QString::fromStdString(oapiResolvePath("Config/XRWindowPosition.ini")));
+		const bool disableWindowPosRestore = positions.RestoreDisabled();
+		#endif
 		if (s_isFirstRun)	// skip next check silently if this is not the first run
 		{
-			if (dwDisableWindowPosRestore == 0)
+			if (!disableWindowPosRestore)
 			{
 				// Get saved window coordinates
+				#ifdef _WIN32
 				CString xCoordValName, yCoordValName;
 				xCoordValName.Format("x_window_coord_%u", GetVideoWindowWidth());
 				yCoordValName.Format("y_window_coord_%u", GetVideoWindowHeight());
-				int x, y;   // NOTE: coordinates must be treated as signed integers since they can go negative with dual monitors
+				int x = 0, y = 0;   // coordinates can go negative with dual monitors
 				bool bSuccess = m_regKeyManager.ReadRegistryDWORD(xCoordValName, (DWORD&)x);
 				bSuccess &= m_regKeyManager.ReadRegistryDWORD(yCoordValName, (DWORD&)y);
+				#else
+				QPoint position;
+				const bool bSuccess = positions.Load(GetVideoWindowWidth(), GetVideoWindowHeight(), position);
+				const int x = position.x(), y = position.y();
+				#endif
 				if (bSuccess)
 				{
-					::SetWindowPos(hOrbiterWnd, 0, static_cast<int>(x), static_cast<int>(y), 0, 0, (SWP_NOSIZE | SWP_NOZORDER));
+					#ifdef _WIN32
+					::SetWindowPos(hOrbiterWnd, 0, x, y, 0, 0, (SWP_NOSIZE | SWP_NOZORDER));
+					#else
+					hOrbiterWnd->setPosition(x, y);
+					#endif
 					char msg[256];
 					sprintf(msg, "Restored Orbiter window to coordinates x=%d, y=%d for window size %u x %u", x, y, GetVideoWindowWidth(), GetVideoWindowHeight());
 					m_pConfig->WriteLog(msg);
@@ -93,7 +130,11 @@ void DeltaGliderXR1::RestoreOrbiterRenderWindowPosition()
 			}
 			else
 			{
+				#ifdef _WIN32
 				m_pConfig->WriteLog("DisableWindowPosRestore is set in registry; Orbiter render window position will not be restored.");
+				#else
+				m_pConfig->WriteLog("DisableWindowPosRestore is set in Config/XRWindowPosition.ini; Orbiter render window position will not be restored.");
+				#endif
 			}
 		}
 	}
@@ -272,12 +313,16 @@ void DeltaGliderXR1::FatalError(const char* pMsg)
 	// write to the log
 	GetXR1Config()->WriteLog(pMsg);
 
+#ifdef _WIN32
 	// close the main window so the dialog box will appear
 	const HWND mainWindow = GetForegroundWindow();
 
 	// show critical error, close the window, and exit
 	MessageBox(mainWindow, pMsg, "Orbiter DG-XR1 Fatal Error", MB_OK | MB_SETFOREGROUND | MB_SYSTEMMODAL);
 	CloseWindow(mainWindow);
+#else
+	QMessageBox::critical(nullptr, "Orbiter DG-XR1 Fatal Error", QString::fromUtf8(pMsg));
+#endif
 	exit(-1);   // bye, bye
 }
 
@@ -385,7 +430,11 @@ void DeltaGliderXR1::TogglePayloadEditor()
 	{
 		// editor is open: close it
 		PlaySound(BeepLow, DeltaGliderXR1::ST_Other);
+#ifdef _WIN32
 		::SendMessage(s_hPayloadEditorDialog, WM_TERMINATE, 0, reinterpret_cast<LPARAM>(this));
+#else
+		XR1PayloadDialog::CloseDialog(s_hPayloadEditorDialog);
+#endif
 		s_hPayloadEditorDialog = 0;
 	}
 	else
@@ -750,51 +799,63 @@ void DeltaGliderXR1::ResetMET()
 	RecordEvent("RESETMET", ".");
 }
 
-void DeltaGliderXR1::UpdateCtrlDialog(DeltaGliderXR1 *dg, HWND hWnd)
+void DeltaGliderXR1::UpdateCtrlDialog(DeltaGliderXR1 *dg, XRDialogHandle hWnd)
 {
+	#ifdef _WIN32
 	static int bstatus[2] = { BST_UNCHECKED, BST_CHECKED };
+#else
+	const bool bstatus[2] = { false, true };
+#endif
 
+#if defined(_WIN32) || defined(IDD_CTRL)
 	if (!hWnd) hWnd = oapiFindDialog(g_hDLL, IDD_CTRL);
+#endif
 	if (!hWnd) return;
 
+#ifdef _WIN32
+#define XR_UPDATE_CHECK(dialog, id, checked) SendDlgItemMessage(dialog, id, BM_SETCHECK, checked, 0)
+#else
+#define XR_UPDATE_CHECK(dialog, id, checked) XRSetDialogCheck(dialog, #id, checked)
+#endif
 	int op;
 
 	op = static_cast<int>(dg->gear_status) & 1;
-	SendDlgItemMessage(hWnd, IDC_GEAR_DOWN, BM_SETCHECK, bstatus[op], 0);
-	SendDlgItemMessage(hWnd, IDC_GEAR_UP, BM_SETCHECK, bstatus[1 - op], 0);
+	XR_UPDATE_CHECK(hWnd, IDC_GEAR_DOWN, bstatus[op]);
+	XR_UPDATE_CHECK(hWnd, IDC_GEAR_UP, bstatus[1 - op]);
 
 	op = static_cast<int>(dg->rcover_status) & 1;
-	SendDlgItemMessage(hWnd, IDC_RETRO_OPEN, BM_SETCHECK, bstatus[op], 0);
-	SendDlgItemMessage(hWnd, IDC_RETRO_CLOSE, BM_SETCHECK, bstatus[1 - op], 0);
+	XR_UPDATE_CHECK(hWnd, IDC_RETRO_OPEN, bstatus[op]);
+	XR_UPDATE_CHECK(hWnd, IDC_RETRO_CLOSE, bstatus[1 - op]);
 
 	op = static_cast<int>(dg->nose_status) & 1;
-	SendDlgItemMessage(hWnd, IDC_NCONE_OPEN, BM_SETCHECK, bstatus[op], 0);
-	SendDlgItemMessage(hWnd, IDC_NCONE_CLOSE, BM_SETCHECK, bstatus[1 - op], 0);
+	XR_UPDATE_CHECK(hWnd, IDC_NCONE_OPEN, bstatus[op]);
+	XR_UPDATE_CHECK(hWnd, IDC_NCONE_CLOSE, bstatus[1 - op]);
 
 	op = static_cast<int>(dg->olock_status) & 1;
-	SendDlgItemMessage(hWnd, IDC_OLOCK_OPEN, BM_SETCHECK, bstatus[op], 0);
-	SendDlgItemMessage(hWnd, IDC_OLOCK_CLOSE, BM_SETCHECK, bstatus[1 - op], 0);
+	XR_UPDATE_CHECK(hWnd, IDC_OLOCK_OPEN, bstatus[op]);
+	XR_UPDATE_CHECK(hWnd, IDC_OLOCK_CLOSE, bstatus[1 - op]);
 
 	op = static_cast<int>(dg->ilock_status) & 1;
-	SendDlgItemMessage(hWnd, IDC_ILOCK_OPEN, BM_SETCHECK, bstatus[op], 0);
-	SendDlgItemMessage(hWnd, IDC_ILOCK_CLOSE, BM_SETCHECK, bstatus[1 - op], 0);
+	XR_UPDATE_CHECK(hWnd, IDC_ILOCK_OPEN, bstatus[op]);
+	XR_UPDATE_CHECK(hWnd, IDC_ILOCK_CLOSE, bstatus[1 - op]);
 
 	op = static_cast<int>(dg->ladder_status) & 1;
-	SendDlgItemMessage(hWnd, IDC_LADDER_EXTEND, BM_SETCHECK, bstatus[op], 0);
-	SendDlgItemMessage(hWnd, IDC_LADDER_RETRACT, BM_SETCHECK, bstatus[1 - op], 0);
+	XR_UPDATE_CHECK(hWnd, IDC_LADDER_EXTEND, bstatus[op]);
+	XR_UPDATE_CHECK(hWnd, IDC_LADDER_RETRACT, bstatus[1 - op]);
 
 	op = static_cast<int>(dg->hatch_status) & 1;
-	SendDlgItemMessage(hWnd, IDC_HATCH_OPEN, BM_SETCHECK, bstatus[op], 0);
-	SendDlgItemMessage(hWnd, IDC_HATCH_CLOSE, BM_SETCHECK, bstatus[1 - op], 0);
+	XR_UPDATE_CHECK(hWnd, IDC_HATCH_OPEN, bstatus[op]);
+	XR_UPDATE_CHECK(hWnd, IDC_HATCH_CLOSE, bstatus[1 - op]);
 
 	op = static_cast<int>(dg->radiator_status) & 1;
-	SendDlgItemMessage(hWnd, IDC_RADIATOR_EXTEND, BM_SETCHECK, bstatus[op], 0);
-	SendDlgItemMessage(hWnd, IDC_RADIATOR_RETRACT, BM_SETCHECK, bstatus[1 - op], 0);
+	XR_UPDATE_CHECK(hWnd, IDC_RADIATOR_EXTEND, bstatus[op]);
+	XR_UPDATE_CHECK(hWnd, IDC_RADIATOR_RETRACT, bstatus[1 - op]);
 
 	op = static_cast<int>(dg->beacon[0].active) ? 1 : 0;
-	SendDlgItemMessage(hWnd, IDC_NAVLIGHT, BM_SETCHECK, bstatus[op], 0);
+	XR_UPDATE_CHECK(hWnd, IDC_NAVLIGHT, bstatus[op]);
 	op = static_cast<int>(dg->beacon[3].active) ? 1 : 0;
-	SendDlgItemMessage(hWnd, IDC_BEACONLIGHT, BM_SETCHECK, bstatus[op], 0);
+	XR_UPDATE_CHECK(hWnd, IDC_BEACONLIGHT, bstatus[op]);
 	op = static_cast<int>(dg->beacon[5].active) ? 1 : 0;
-	SendDlgItemMessage(hWnd, IDC_STROBELIGHT, BM_SETCHECK, bstatus[op], 0);
+	XR_UPDATE_CHECK(hWnd, IDC_STROBELIGHT, bstatus[op]);
+#undef XR_UPDATE_CHECK
 }

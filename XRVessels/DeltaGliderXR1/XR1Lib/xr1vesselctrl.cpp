@@ -483,11 +483,11 @@ bool DeltaGliderXR1::SetXRSystemStatus(const XRSystemStatusWrite &status)
     ClearAllXRDamage();
 
     // Now apply the new status one item at a time
-#define SET_DMG_INT(statusField, XREnum)  { double val = status.##statusField; LIMITS(val, 0, 1.0); SetDamageStatus(XREnum, val); }
+#define SET_DMG_INT(statusField, XREnum)  { double val = status.statusField; LIMITS(val, 0, 1.0); SetDamageStatus(XREnum, val); }
 #define SET_DMG_ENUM(statusField, XREnum)                       \
      {                                                          \
         double val;                                             \
-        XRDamageState state = status.##statusField;             \
+        XRDamageState state = status.statusField;               \
         if (state == XRDamageState::XRDMG_online) val = 1.0;    \
         else val = 0.0;  /* unsupported or offline */           \
         SetDamageStatus(XREnum, val);                           \

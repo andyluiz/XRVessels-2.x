@@ -179,7 +179,7 @@ ScramTSFCGaugeArea::ScramTSFCGaugeArea(InstrumentPanel &parentPanel, const COORD
 VerticalGaugeArea::RENDERDATA ScramTSFCGaugeArea::GetRenderData(const SIDE side)
 {
     // NOTE: must use UNSIGNED int here because TSFC can become very large, tripping the MSB
-    int p = 66 - min(66, static_cast<unsigned int>(GetXR1().ramjet->TSFC(static_cast<unsigned int>(side))*(1e3 * 66.0 / SCRAM_TSFC_GAUGE_MAX)));
+    int p = 66 - min(66u, static_cast<unsigned int>(GetXR1().ramjet->TSFC(static_cast<unsigned int>(side))*(1e3 * 66.0 / SCRAM_TSFC_GAUGE_MAX)));
 
     // show in yellow if off-scale 
     COLOR color = ((p == 0) ? COLOR::YELLOW : COLOR::GREEN);
@@ -298,7 +298,7 @@ VerticalGaugeArea::RENDERDATA MainFlowGaugeArea::GetRenderData(const SIDE side)
             isRetro = true;
     }
 
-    int p = 66 - static_cast<int>(min(totalFlowRate * 66 / MAIN_FLOW_GAUGE_MAX, 66));
+    int p = 66 - static_cast<int>(min(totalFlowRate * 66 / MAIN_FLOW_GAUGE_MAX, 66.0));
 
     // use a green indicator for main engines or a red indicator for retro engines
     return _RENDERDATA(isRetro ? COLOR::RED : COLOR::GREEN, p);
@@ -1112,4 +1112,3 @@ VerticalGaugeArea::RENDERDATA CenterOfGravityGaugeArea::GetRenderData(const SIDE
 
     return _RENDERDATA(color, p);  
 }
-

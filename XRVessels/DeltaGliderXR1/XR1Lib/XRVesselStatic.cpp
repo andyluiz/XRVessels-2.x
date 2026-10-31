@@ -45,6 +45,7 @@ void DeltaGliderXR1::SafeBlt(SURFHANDLE tgt, SURFHANDLE src, int tgtx, int tgty,
 // Message callback function for control dialog box
 // ==============================================================
 
+#ifdef _WIN32
 INT_PTR CALLBACK XR1Ctrl_DlgProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     DeltaGliderXR1* dg = (uMsg == WM_INITDIALOG ? reinterpret_cast<DeltaGliderXR1*>(lParam) : reinterpret_cast<DeltaGliderXR1*>(oapiGetDialogContext(hWnd)));
@@ -124,6 +125,35 @@ INT_PTR CALLBACK XR1Ctrl_DlgProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPa
     }
     return oapiDefDialogProc(hWnd, uMsg, wParam, lParam);
 }
+#else
+void XR1Ctrl_DlgProc(QWidget *dialog, void *context)
+{
+    auto *dg = static_cast<DeltaGliderXR1 *>(context);
+    if (!dg || !dialog) return;
+#define XR_DOOR(id, method, state) XRConnectDialogButton(dialog, #id, [dg] { dg->method(DoorStatus::state); })
+    XR_DOOR(IDC_GEAR_UP, ActivateLandingGear, DOOR_CLOSING);
+    XR_DOOR(IDC_GEAR_DOWN, ActivateLandingGear, DOOR_OPENING);
+    XR_DOOR(IDC_RETRO_CLOSE, ActivateRCover, DOOR_CLOSING);
+    XR_DOOR(IDC_RETRO_OPEN, ActivateRCover, DOOR_OPENING);
+    XR_DOOR(IDC_NCONE_CLOSE, ActivateNoseCone, DOOR_CLOSING);
+    XR_DOOR(IDC_NCONE_OPEN, ActivateNoseCone, DOOR_OPENING);
+    XR_DOOR(IDC_OLOCK_CLOSE, ActivateOuterAirlock, DOOR_CLOSING);
+    XR_DOOR(IDC_OLOCK_OPEN, ActivateOuterAirlock, DOOR_OPENING);
+    XR_DOOR(IDC_ILOCK_CLOSE, ActivateInnerAirlock, DOOR_CLOSING);
+    XR_DOOR(IDC_ILOCK_OPEN, ActivateInnerAirlock, DOOR_OPENING);
+    XR_DOOR(IDC_LADDER_RETRACT, ActivateLadder, DOOR_CLOSING);
+    XR_DOOR(IDC_LADDER_EXTEND, ActivateLadder, DOOR_OPENING);
+    XR_DOOR(IDC_HATCH_CLOSE, ActivateHatch, DOOR_CLOSING);
+    XR_DOOR(IDC_HATCH_OPEN, ActivateHatch, DOOR_OPENING);
+    XR_DOOR(IDC_RADIATOR_RETRACT, ActivateRadiator, DOOR_CLOSING);
+    XR_DOOR(IDC_RADIATOR_EXTEND, ActivateRadiator, DOOR_OPENING);
+#undef XR_DOOR
+    XRConnectDialogButton(dialog, "IDC_NAVLIGHT", [dg](bool checked) { dg->SetNavlight(checked); });
+    XRConnectDialogButton(dialog, "IDC_BEACONLIGHT", [dg](bool checked) { dg->SetBeacon(checked); });
+    XRConnectDialogButton(dialog, "IDC_STROBELIGHT", [dg](bool checked) { dg->SetStrobe(checked); });
+    dg->UpdateCtrlDialog(dg, dialog);
+}
+#endif
 
 
 // ==============================================================
@@ -177,7 +207,7 @@ void DeltaGliderXR1::HLiftCoeff(VESSEL* v, double beta, double M, double Re, voi
 }
 
 // static data
-HWND DeltaGliderXR1::s_hPayloadEditorDialog = 0;
+XRDialogHandle DeltaGliderXR1::s_hPayloadEditorDialog = nullptr;
 
 // --------------------------------------------------------------
 // Convert spaces to a character that Orbiter can save

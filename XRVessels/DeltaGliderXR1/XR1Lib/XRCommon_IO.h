@@ -24,6 +24,10 @@
 // ==============================================================
 
 #pragma once
+#ifndef _WIN32
+#include <strings.h>
+#define _strnicmp strncasecmp
+#endif
 
 //
 // Utility macros
@@ -34,7 +38,7 @@
 //    bool found;   // set to true if any SSCANF macro was invoked
 
 #define IF_FOUND(name)  if (!_strnicmp(line, name, (len = static_cast<int>(strlen(name))))) 
-#define IF_FOUND_CONFIG_OVERRIDE(name)  IF_FOUND("CONFIG_OVERRIDE_"##name)
+#define IF_FOUND_CONFIG_OVERRIDE(name)  IF_FOUND("CONFIG_OVERRIDE_" name)
 #define SET_CONFIG_OVERRIDE_INT(field, val)                             \
 {                                                                       \
     const_cast<XR1ConfigFileParser *>(GetXR1Config())->field = val;     \

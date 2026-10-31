@@ -26,8 +26,26 @@
 
 #pragma once
 
-#include <atlstr.h>		// for CString
+#include "XRString.h"
 #include <vector>
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include "Orbitersdk.h"
+#include <QDir>
+
+// Preserve the scanner's callback contract while enumerating files with Qt.
+struct WIN32_FIND_DATA
+{
+    char cFileName[MAX_PATH];
+    DWORD dwFileAttributes;
+    DWORD nFileSizeHigh;
+    DWORD nFileSizeLow;
+};
+#ifndef FILE_ATTRIBUTE_DIRECTORY
+#define FILE_ATTRIBUTE_DIRECTORY 0x10
+#endif
+#endif
 
 using namespace std;
 
@@ -41,9 +59,13 @@ public:
 
     static bool DirectoryExists(const char *pPath)
     {
+#ifdef _WIN32
         DWORD dwAttrib = GetFileAttributes(pPath);
 
         return (dwAttrib != INVALID_FILE_ATTRIBUTES && (dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+#else
+        return QDir(QString::fromStdString(oapiResolvePath(pPath))).exists();
+#endif
     }
 
     // Scan (or rescan) file tree.

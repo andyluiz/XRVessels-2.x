@@ -43,7 +43,7 @@
 // --------------------------------------------------------------
 // Module initialisation
 // --------------------------------------------------------------
-DLLCLBK void InitModule (HINSTANCE hModule)
+DLLCLBK void InitModule (XRModuleHandle hModule)
 {
     g_hDLL = hModule;
     oapiRegisterCustomControls(hModule);
@@ -52,7 +52,7 @@ DLLCLBK void InitModule (HINSTANCE hModule)
 // --------------------------------------------------------------
 // Module cleanup
 // --------------------------------------------------------------
-DLLCLBK void ExitModule (HINSTANCE hModule)
+DLLCLBK void ExitModule (XRModuleHandle hModule)
 {
     oapiUnregisterCustomControls(hModule);
     XRPayloadClassData::Terminate();     // clean up global cache
@@ -207,6 +207,7 @@ void XR5Vanguard::ReinitializeDamageableControlSurfaces()
 // Message callback function for control dialog box
 // ==============================================================
 
+#ifdef _WIN32
 INT_PTR CALLBACK XR5Ctrl_DlgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     XR5Vanguard *dg = (uMsg == WM_INITDIALOG ? reinterpret_cast<XR5Vanguard *>(lParam) : reinterpret_cast<XR5Vanguard *>(oapiGetDialogContext(hWnd)));
@@ -321,10 +322,49 @@ INT_PTR CALLBACK XR5Ctrl_DlgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
     }
     return oapiDefDialogProc(hWnd, uMsg, wParam, lParam);
 }
-
-void XR5Vanguard::UpdateCtrlDialog(XR5Vanguard *dg, HWND hWnd)
+#else
+void XR5Ctrl_DlgProc(QWidget *dialog, void *context)
 {
-    static int bstatus[2] = {BST_UNCHECKED, BST_CHECKED};
+    auto *dg = static_cast<XR5Vanguard *>(context);
+    if (!dg || !dialog) return;
+#define XR_DOOR(id, method, state) XRConnectDialogButton(dialog, #id, [dg] { dg->method(DoorStatus::state); })
+    XR_DOOR(IDC_GEAR_UP, ActivateLandingGear, DOOR_CLOSING);
+    XR_DOOR(IDC_GEAR_DOWN, ActivateLandingGear, DOOR_OPENING);
+    XR_DOOR(IDC_RETRO_CLOSE, ActivateRCover, DOOR_CLOSING);
+    XR_DOOR(IDC_RETRO_OPEN, ActivateRCover, DOOR_OPENING);
+    XR_DOOR(IDC_BAY_CLOSE, ActivateBayDoors, DOOR_CLOSING);
+    XR_DOOR(IDC_BAY_OPEN, ActivateBayDoors, DOOR_OPENING);
+    XR_DOOR(IDC_OLOCK_CLOSE, ActivateOuterAirlock, DOOR_CLOSING);
+    XR_DOOR(IDC_OLOCK_OPEN, ActivateOuterAirlock, DOOR_OPENING);
+    XR_DOOR(IDC_ILOCK_CLOSE, ActivateInnerAirlock, DOOR_CLOSING);
+    XR_DOOR(IDC_ILOCK_OPEN, ActivateInnerAirlock, DOOR_OPENING);
+    XR_DOOR(IDC_HOVER_CLOSE, ActivateHoverDoors, DOOR_CLOSING);
+    XR_DOOR(IDC_HOVER_OPEN, ActivateHoverDoors, DOOR_OPENING);
+    XR_DOOR(IDC_DOCKING_STOW, ActivateNoseCone, DOOR_CLOSING);
+    XR_DOOR(IDC_DOCKING_DEPLOY, ActivateNoseCone, DOOR_OPENING);
+    XR_DOOR(IDC_ELEVATOR_STOW, ActivateElevator, DOOR_CLOSING);
+    XR_DOOR(IDC_ELEVATOR_DEPLOY, ActivateElevator, DOOR_OPENING);
+    XR_DOOR(IDC_SCRAM_CLOSE, ActivateScramDoors, DOOR_CLOSING);
+    XR_DOOR(IDC_SCRAM_OPEN, ActivateScramDoors, DOOR_OPENING);
+    XR_DOOR(IDC_HATCH_CLOSE, ActivateHatch, DOOR_CLOSING);
+    XR_DOOR(IDC_HATCH_OPEN, ActivateHatch, DOOR_OPENING);
+    XR_DOOR(IDC_RADIATOR_STOW, ActivateRadiator, DOOR_CLOSING);
+    XR_DOOR(IDC_RADIATOR_DEPLOY, ActivateRadiator, DOOR_OPENING);
+#undef XR_DOOR
+    XRConnectDialogButton(dialog, "IDC_NAVLIGHT", [dg](bool checked) { dg->SetNavlight(checked); });
+    XRConnectDialogButton(dialog, "IDC_BEACONLIGHT", [dg](bool checked) { dg->SetBeacon(checked); });
+    XRConnectDialogButton(dialog, "IDC_STROBELIGHT", [dg](bool checked) { dg->SetStrobe(checked); });
+    dg->UpdateCtrlDialog(dg, dialog);
+}
+#endif
+
+void XR5Vanguard::UpdateCtrlDialog(XR5Vanguard *dg, XRDialogHandle hWnd)
+{
+    #ifdef _WIN32
+ static int bstatus[2] = {BST_UNCHECKED, BST_CHECKED};
+#else
+ const bool bstatus[2] = {false, true};
+#endif
     
     if (hWnd == nullptr) 
         hWnd = oapiFindDialog (g_hDLL, IDD_CTRL);
@@ -332,58 +372,64 @@ void XR5Vanguard::UpdateCtrlDialog(XR5Vanguard *dg, HWND hWnd)
     if (hWnd == nullptr) 
         return;
 
+#ifdef _WIN32
+#define XR_UPDATE_CHECK(dialog, id, checked) SendDlgItemMessage(dialog, id, BM_SETCHECK, checked, 0)
+#else
+#define XR_UPDATE_CHECK(dialog, id, checked) XRSetDialogCheck(dialog, #id, checked)
+#endif
     int op;
     
     op = static_cast<int>(dg->gear_status) & 1;
-    SendDlgItemMessage (hWnd, IDC_GEAR_DOWN, BM_SETCHECK, bstatus[op], 0);
-    SendDlgItemMessage (hWnd, IDC_GEAR_UP, BM_SETCHECK, bstatus[1-op], 0);
+    XR_UPDATE_CHECK(hWnd, IDC_GEAR_DOWN, bstatus[op]);
+    XR_UPDATE_CHECK(hWnd, IDC_GEAR_UP, bstatus[1-op]);
     
     op = static_cast<int>(dg->rcover_status) & 1;
-    SendDlgItemMessage (hWnd, IDC_RETRO_OPEN, BM_SETCHECK, bstatus[op], 0);
-    SendDlgItemMessage (hWnd, IDC_RETRO_CLOSE, BM_SETCHECK, bstatus[1-op], 0);
+    XR_UPDATE_CHECK(hWnd, IDC_RETRO_OPEN, bstatus[op]);
+    XR_UPDATE_CHECK(hWnd, IDC_RETRO_CLOSE, bstatus[1-op]);
     
     op = static_cast<int>(dg->bay_status) & 1;
-    SendDlgItemMessage (hWnd, IDC_BAY_OPEN, BM_SETCHECK, bstatus[op], 0);
-    SendDlgItemMessage (hWnd, IDC_BAY_CLOSE, BM_SETCHECK, bstatus[1-op], 0);
+    XR_UPDATE_CHECK(hWnd, IDC_BAY_OPEN, bstatus[op]);
+    XR_UPDATE_CHECK(hWnd, IDC_BAY_CLOSE, bstatus[1-op]);
 
     op = static_cast<int>(dg->olock_status) & 1;
-    SendDlgItemMessage (hWnd, IDC_OLOCK_OPEN, BM_SETCHECK, bstatus[op], 0);
-    SendDlgItemMessage (hWnd, IDC_OLOCK_CLOSE, BM_SETCHECK, bstatus[1-op], 0);
+    XR_UPDATE_CHECK(hWnd, IDC_OLOCK_OPEN, bstatus[op]);
+    XR_UPDATE_CHECK(hWnd, IDC_OLOCK_CLOSE, bstatus[1-op]);
     
     op = static_cast<int>(dg->ilock_status) & 1;
-    SendDlgItemMessage (hWnd, IDC_ILOCK_OPEN, BM_SETCHECK, bstatus[op], 0);
-    SendDlgItemMessage (hWnd, IDC_ILOCK_CLOSE, BM_SETCHECK, bstatus[1-op], 0);
+    XR_UPDATE_CHECK(hWnd, IDC_ILOCK_OPEN, bstatus[op]);
+    XR_UPDATE_CHECK(hWnd, IDC_ILOCK_CLOSE, bstatus[1-op]);
 
     op = static_cast<int>(dg->hoverdoor_status) & 1;
-    SendDlgItemMessage (hWnd, IDC_HOVER_OPEN, BM_SETCHECK, bstatus[op], 0);
-    SendDlgItemMessage (hWnd, IDC_HOVER_CLOSE, BM_SETCHECK, bstatus[1-op], 0);
+    XR_UPDATE_CHECK(hWnd, IDC_HOVER_OPEN, bstatus[op]);
+    XR_UPDATE_CHECK(hWnd, IDC_HOVER_CLOSE, bstatus[1-op]);
 
     op = static_cast<int>(dg->nose_status) & 1;
-    SendDlgItemMessage (hWnd, IDC_DOCKING_DEPLOY, BM_SETCHECK, bstatus[op], 0);
-    SendDlgItemMessage (hWnd, IDC_DOCKING_STOW, BM_SETCHECK, bstatus[1-op], 0);
+    XR_UPDATE_CHECK(hWnd, IDC_DOCKING_DEPLOY, bstatus[op]);
+    XR_UPDATE_CHECK(hWnd, IDC_DOCKING_STOW, bstatus[1-op]);
     
     op = static_cast<int>(dg->crewElevator_status) & 1;
-    SendDlgItemMessage (hWnd, IDC_ELEVATOR_DEPLOY, BM_SETCHECK, bstatus[op], 0);
-    SendDlgItemMessage (hWnd, IDC_ELEVATOR_STOW, BM_SETCHECK, bstatus[1-op], 0);
+    XR_UPDATE_CHECK(hWnd, IDC_ELEVATOR_DEPLOY, bstatus[op]);
+    XR_UPDATE_CHECK(hWnd, IDC_ELEVATOR_STOW, bstatus[1-op]);
     
     op = static_cast<int>(dg->scramdoor_status) & 1;
-    SendDlgItemMessage (hWnd, IDC_SCRAM_OPEN, BM_SETCHECK, bstatus[op], 0);
-    SendDlgItemMessage (hWnd, IDC_SCRAM_CLOSE, BM_SETCHECK, bstatus[1-op], 0);
+    XR_UPDATE_CHECK(hWnd, IDC_SCRAM_OPEN, bstatus[op]);
+    XR_UPDATE_CHECK(hWnd, IDC_SCRAM_CLOSE, bstatus[1-op]);
 
     op = static_cast<int>(dg->hatch_status) & 1;
-    SendDlgItemMessage (hWnd, IDC_HATCH_OPEN, BM_SETCHECK, bstatus[op], 0);
-    SendDlgItemMessage (hWnd, IDC_HATCH_CLOSE, BM_SETCHECK, bstatus[1-op], 0);
+    XR_UPDATE_CHECK(hWnd, IDC_HATCH_OPEN, bstatus[op]);
+    XR_UPDATE_CHECK(hWnd, IDC_HATCH_CLOSE, bstatus[1-op]);
     
     op = static_cast<int>(dg->radiator_status) & 1;
-    SendDlgItemMessage (hWnd, IDC_RADIATOR_DEPLOY, BM_SETCHECK, bstatus[op], 0);
-    SendDlgItemMessage (hWnd, IDC_RADIATOR_STOW, BM_SETCHECK, bstatus[1-op], 0);
+    XR_UPDATE_CHECK(hWnd, IDC_RADIATOR_DEPLOY, bstatus[op]);
+    XR_UPDATE_CHECK(hWnd, IDC_RADIATOR_STOW, bstatus[1-op]);
     
     op = static_cast<int>(dg->beacon[0].active) ? 1:0;
-    SendDlgItemMessage (hWnd, IDC_NAVLIGHT, BM_SETCHECK, bstatus[op], 0);
+    XR_UPDATE_CHECK(hWnd, IDC_NAVLIGHT, bstatus[op]);
     op = static_cast<int>(dg->beacon[3].active) ? 1:0;
-    SendDlgItemMessage (hWnd, IDC_BEACONLIGHT, BM_SETCHECK, bstatus[op], 0);
+    XR_UPDATE_CHECK(hWnd, IDC_BEACONLIGHT, bstatus[op]);
     op = static_cast<int>(dg->beacon[5].active) ? 1:0;
-    SendDlgItemMessage (hWnd, IDC_STROBELIGHT, BM_SETCHECK, bstatus[op], 0);
+    XR_UPDATE_CHECK(hWnd, IDC_STROBELIGHT, bstatus[op]);
+#undef XR_UPDATE_CHECK
 }
 
 // toggle RCS docking mode
@@ -960,5 +1006,5 @@ DWORD XR5Vanguard::MeshTextureIDToTextureIndex(const int meshTextureID, MESHHAND
     _ASSERTE(false);  // should never reach here!
 
     hMesh = nullptr;      
-    return MAXDWORD;   // bogus
+    return static_cast<DWORD>(-1);   // bogus
 }

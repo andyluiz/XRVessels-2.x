@@ -30,11 +30,13 @@
 #include "ScnEditorAPI.h"
 #include "DlgCtrl.h"
 #include "XR1PayloadDialog.h"
+#include "XRControlDialog.h"
 
 // ==============================================================
 // Scenario editor interface
 // ==============================================================
 
+#ifdef _WIN32
 XR2Ravenstar *GetDG (HWND hDlg)
 {
     // retrieve DG interface from scenario editor
@@ -194,3 +196,55 @@ DLLCLBK void secInit (HWND hEditor, OBJHANDLE vessel)
     EditorFuncSpec efs = { "Payload", XR1PayloadDialog::EditorFunc};
     SendMessage (hEditor, WM_SCNEDITOR, SE_ADDFUNCBUTTON, reinterpret_cast<LPARAM>(&efs));
 }
+#else
+// The Qt scenario editor passes the edited vessel as its page initializer context.
+static void InitializeAnimationPage(QWidget *page, void *context)
+{
+    auto *vessel = static_cast<XR2Ravenstar *>(oapiGetVesselInterface(static_cast<OBJHANDLE>(context)));
+    if (!vessel) return;
+    // As on Windows, animation controls bypass the APU interlock and restore it afterwards.
+#define XR_ANIM(id, method, state) XRConnectDialogButton(page, #id, [vessel] { \
+        const auto apu = vessel->apu_status; \
+        vessel->apu_status = DoorStatus::DOOR_OPEN; \
+        vessel->method(DoorStatus::state); \
+        vessel->apu_status = apu; \
+    })
+    XR_ANIM(IDC_GEAR_UP, ActivateLandingGear, DOOR_CLOSED);
+    XR_ANIM(IDC_GEAR_DOWN, ActivateLandingGear, DOOR_OPEN);
+    XR_ANIM(IDC_AIRBRAKE_STOWED, ActivateAirbrake, DOOR_CLOSED);
+    XR_ANIM(IDC_AIRBRAKE_DEPLOYED, ActivateAirbrake, DOOR_OPEN);
+    XR_ANIM(IDC_OLOCK_CLOSE, ActivateOuterAirlock, DOOR_CLOSED);
+    XR_ANIM(IDC_OLOCK_OPEN, ActivateOuterAirlock, DOOR_OPEN);
+    XR_ANIM(IDC_ILOCK_CLOSE, ActivateInnerAirlock, DOOR_CLOSED);
+    XR_ANIM(IDC_ILOCK_OPEN, ActivateInnerAirlock, DOOR_OPEN);
+    XR_ANIM(IDC_NCONE_OPEN, ActivateNoseCone, DOOR_OPEN);
+    XR_ANIM(IDC_HATCH_CLOSE, ActivateHatch, DOOR_CLOSED);
+    XR_ANIM(IDC_HATCH_OPEN, ActivateHatch, DOOR_OPEN);
+    XR_ANIM(IDC_RADIATOR_RETRACT, ActivateRadiator, DOOR_CLOSED);
+    XR_ANIM(IDC_RADIATOR_EXTEND, ActivateRadiator, DOOR_OPEN);
+    XR_ANIM(IDC_SCRAM_CLOSED, ActivateScramDoors, DOOR_CLOSED);
+    XR_ANIM(IDC_SCRAM_OPEN, ActivateScramDoors, DOOR_OPEN);
+    XR_ANIM(IDC_HOVER_CLOSED, ActivateHoverDoors, DOOR_CLOSED);
+    XR_ANIM(IDC_HOVER_OPEN, ActivateHoverDoors, DOOR_OPEN);
+    XR_ANIM(IDC_BAY_CLOSED, ActivateBayDoors, DOOR_CLOSED);
+    XR_ANIM(IDC_BAY_OPEN, ActivateBayDoors, DOOR_OPEN);
+    XR_ANIM(IDC_RETRO_CLOSE, ActivateRCover, DOOR_CLOSED);
+    XR_ANIM(IDC_RETRO_OPEN, ActivateRCover, DOOR_OPEN);
+#undef XR_ANIM
+    XRConnectDialogButton(page, "IDC_NCONE_CLOSE", [vessel] {
+        const auto apu = vessel->apu_status;
+        vessel->apu_status = DoorStatus::DOOR_OPEN;
+        vessel->ActivateOuterAirlock(DoorStatus::DOOR_CLOSED);
+        vessel->ActivateNoseCone(DoorStatus::DOOR_CLOSED);
+        vessel->apu_status = apu;
+    });
+}
+
+DLLCLBK void secInit(QWidget *editor, OBJHANDLE vessel)
+{
+    EditorPageSpec animations = {"Animations", g_hDLL, IDD_EDITOR_PG1, InitializeAnimationPage};
+    ScnEditorMsg(editor, SE_ADDPAGEBUTTON, reinterpret_cast<LPARAM>(&animations));
+    EditorFuncSpec payload = {"Payload", XR1PayloadDialog::EditorFunc};
+    ScnEditorMsg(editor, SE_ADDFUNCBUTTON, reinterpret_cast<LPARAM>(&payload));
+}
+#endif

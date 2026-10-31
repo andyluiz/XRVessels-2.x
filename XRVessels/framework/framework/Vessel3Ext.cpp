@@ -33,6 +33,9 @@
 
 #include "InstrumentPanel.h"
 #include "PrePostStep.h"
+#ifndef _WIN32
+#include <QDate>
+#endif
 
 // constructor
 VESSEL3_EXT::VESSEL3_EXT(OBJHANDLE vessel, int fmodel) :
@@ -41,7 +44,9 @@ VESSEL3_EXT::VESSEL3_EXT(OBJHANDLE vessel, int fmodel) :
 	m_videoWindowWidth(0), m_videoWindowHeight(0), m_lastVideoWindowWidth(-1), m_last2DPanelWidth(0),
     m_absoluteSimTime(0), m_pConfig(nullptr)
 {
+#ifdef _WIN32
 	m_regKeyManager.Initialize(HKEY_CURRENT_USER, XR_GLOBAL_SETTINGS_REG_KEY, nullptr);   // should always succeed
+#endif
 }
 
 // destructor
@@ -678,10 +683,15 @@ void VESSEL3_EXT::GetStatusSafe(const VESSEL &vessel, VESSELSTATUS2 &status, con
 // month=1-12, day=1-31
 bool VESSEL3_EXT::IsToday(WORD wMonth, WORD wDay)  
 {
+#ifdef _WIN32
     SYSTEMTIME st;
     GetLocalTime(&st);
 
     return ((wMonth == st.wMonth) && (wDay == st.wDay));
+#else
+    const QDate today = QDate::currentDate();
+    return wMonth == today.month() && wDay == today.day();
+#endif
 }
 
 // Set a mesh group visible or invisible

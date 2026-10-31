@@ -318,14 +318,24 @@ ScramTempGaugeArea::ScramTempGaugeArea(InstrumentPanel &parentPanel, const COORD
     XR1Area(parentPanel, panelCoordinates, areaID, meshTextureID)
 {
     // create pens that we need
+#ifdef _WIN32
     m_pen0 = CreatePen(PS_SOLID, 1, RGB(224,224,224));
     m_pen1 = CreatePen(PS_SOLID, 3, RGB(164,164,164));
+#else
+    m_pen0 = new QPen(QColor(224,224,224), 1);
+    m_pen1 = new QPen(QColor(164,164,164), 3);
+#endif
 }
 
 ScramTempGaugeArea::~ScramTempGaugeArea()
 {
+#ifdef _WIN32
     DeleteObject(m_pen0);
     DeleteObject(m_pen1);
+#else
+    delete m_pen0;
+    delete m_pen1;
+#endif
 }
 
 
@@ -346,7 +356,12 @@ bool ScramTempGaugeArea::Redraw2D(const int event, const SURFHANDLE surf)
     int i, j, x0, y0, dx, dy;
     
     HDC hDC = GetDC(surf);
+#ifdef _WIN32
     SelectObject(hDC, m_pen0);
+#else
+    hDC->save();
+    hDC->setPen(*m_pen0);
+#endif
     for (j = 0; j < 3; j++) 
     {
         for (i = 0; i < 2; i++)
@@ -358,11 +373,19 @@ bool ScramTempGaugeArea::Redraw2D(const int event, const SURFHANDLE surf)
             // {YYY} resolve this for the XR2
             x0 = (IsVC() ? 20 : 22-j) + i*43;
             y0 = 19+j*46;
-            MoveToEx(hDC, x0, y0, nullptr); 
+#ifdef _WIN32
+            MoveToEx(hDC, x0, y0, nullptr);
             LineTo(hDC, x0+dx, y0-dy);
+#else
+            hDC->drawLine(x0, y0, x0+dx, y0-dy);
+#endif
         }
     }
+#ifdef _WIN32
     SelectObject(hDC, GetStockObject(BLACK_PEN));
+#else
+    hDC->restore();
+#endif
     ReleaseDC (surf, hDC);
 
     return true;

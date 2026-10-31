@@ -614,11 +614,13 @@ numpad8c_descent:
             return 1;   // we handled this key
 
         case OAPI_KEY_SPACE: // open control dialog
+#if defined(_WIN32) || defined(IDD_CTRL)
             // allow if crew incapacitated here
             oapiOpenDialogEx (g_hDLL, IDD_CTRL, XR1Ctrl_DlgProc, DLG_CAPTIONCLOSE, this);
             return 1;
-
-            typedef INT_PTR(CALLBACK* DLGPROC)(HWND, UINT, WPARAM, LPARAM);
+#else
+            break;  // XR2 has no XR1 control dialog resource
+#endif
 
         case OAPI_KEY_A:    // toggle APU on/off
             RET_IF_INCAP();
@@ -1077,4 +1079,3 @@ numpad8n_descent:
     }
     return 0;
 }
-

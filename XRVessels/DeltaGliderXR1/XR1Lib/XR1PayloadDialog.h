@@ -33,6 +33,7 @@
 #include "DeltaGliderXR1.h"
 #include "XR1PayloadBay.h"
 
+#ifdef _WIN32
 // custom messages
 #define WM_XR1_UPDATEMASSVALUES (WM_USER+100) /* so we don't step on Orbiter's message IDs */
 #define WM_TERMINATE            (WM_USER+101) /* clean up and close dialog gracefully: LPARAM = DeltaGliderXR1 * requesting the close. */
@@ -68,3 +69,23 @@ protected:
     static HFONT s_hOrgFont;      // normal button font handle
     static HFONT s_hBoldFont;     // bold button font handle
 };
+#else
+// Orbiter's Linux resource dialogs are QWidget trees, not Win32 message targets.
+class XR1PayloadDialog
+{
+public:
+    static void EditorFunc(OBJHANDLE hVessel);
+    static XRDialogHandle Launch(OBJHANDLE hVessel);
+    static void CloseDialog(XRDialogHandle dialog);
+
+    static const int slotCount;
+    static const int slotResourceIDs[];
+
+private:
+    static void Initialize(QWidget *dialog, void *context);
+    static void UpdateMassValues(QWidget *dialog, const DeltaGliderXR1 &vessel);
+    static void UpdatePayloadFields(QWidget *dialog, const char *classname);
+    static void RescanBay(QWidget *dialog, DeltaGliderXR1 &vessel);
+    static void SelectedPayloadChanged(QWidget *dialog, DeltaGliderXR1 &vessel);
+};
+#endif

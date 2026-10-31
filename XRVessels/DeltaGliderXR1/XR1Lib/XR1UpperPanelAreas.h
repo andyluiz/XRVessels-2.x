@@ -204,8 +204,8 @@ public:
 
 protected:
     // data
-    HPEN m_pen0;
-    HPEN m_pen1;
+    XRPanelPen m_pen0;
+    XRPanelPen m_pen1;
 };
 
 //----------------------------------------------------------------------------------
@@ -302,4 +302,3 @@ protected:
     virtual bool isOn();
     virtual bool ProcessSwitchEvent(bool switchIsOn);
 };
-

@@ -77,9 +77,13 @@ void InstrumentPanel::Deactivate()
         // deactivate all our areas, including our component's areas
         DeactivateAllAreas();
 
-        // free our bitmap, if any
+        // Linux Orbiter consumes the QImage in oapiRegisterPanelBackground.
+        // Windows retains the original bitmap cleanup behavior.
+#ifdef _WIN32
         if (m_hBmp != nullptr)
-            DeleteObject(m_hBmp);
+            XRDeleteBitmap(m_hBmp);
+#endif
+        m_hBmp = nullptr;
 
         SetActive(false);   // panel deactivated now
     }

@@ -30,7 +30,15 @@
 #pragma once
 
 #define _CRT_SECURE_NO_DEPRECATE
-#include "windows.h"
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include "OrbiterPlatform.h"
+#include <QFont>
+#include <QPainter>
+using HDC = QPainter *;
+using HFONT = QFont *;
+#endif
 
 #include "XR1Colors.h"
 
@@ -122,4 +130,3 @@ protected:
     // reference to text lines themselves
     const TextLineGroup &m_textLineGroup;
 };
-

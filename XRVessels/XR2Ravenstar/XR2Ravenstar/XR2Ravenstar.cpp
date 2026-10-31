@@ -45,7 +45,7 @@
 // --------------------------------------------------------------
 // Module initialisation
 // --------------------------------------------------------------
-DLLCLBK void InitModule (HINSTANCE hModule)
+DLLCLBK void InitModule (XRModuleHandle hModule)
 {
     g_hDLL = hModule;
     oapiRegisterCustomControls(hModule);
@@ -55,7 +55,7 @@ DLLCLBK void InitModule (HINSTANCE hModule)
 // Module cleanup
 // NOTE: this is called even if fast shutdown is enabled.
 // --------------------------------------------------------------
-DLLCLBK void ExitModule (HINSTANCE hModule)
+DLLCLBK void ExitModule (XRModuleHandle hModule)
 {
     oapiUnregisterCustomControls(hModule);
     XRPayloadClassData::Terminate();     // clean up global cache

@@ -75,5 +75,8 @@ extern const DamageItem D_END;
 // ==============================================================
 // Global callback prototypes 
 
+#ifdef _WIN32
 INT_PTR CALLBACK XR5Ctrl_DlgProc(HWND, UINT, WPARAM, LPARAM);
-
+#else
+void XR5Ctrl_DlgProc(QWidget *, void *);
+#endif

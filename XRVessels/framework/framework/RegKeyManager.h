@@ -23,7 +23,7 @@
 
 #include <windows.h>
 #include <WinCrypt.h>	// for DATA_BLOB
-#include <atlstr.h>		// for CString
+#include "XRString.h"
 
 // Reads & writes our values to the registry
 class RegKeyManager

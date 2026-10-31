@@ -25,6 +25,10 @@
 // ==============================================================
 
 #include "VesselConfigFileParser.h"
+#ifndef _WIN32
+#include "OrbiterAPI.h"
+#include <QFileInfo>
+#endif
 
 // Constructor
 // pFilename = path to config file; may be relative to Orbiter root or absolute
@@ -51,7 +55,11 @@ bool VesselConfigFileParser::ParseVesselConfig(const char *pVesselName)
     SetLogPrefix(pVesselName);
     
     m_csOverrideFilename.Format("Config\\%s.xrcfg", pVesselName);  // e.g., "Config\XR5-01.xrcfg"
+#ifdef _WIN32
     const BOOL overrideFileExists = PathFileExists(m_csOverrideFilename);
+#else
+    const bool overrideFileExists = QFileInfo::exists(QString::fromStdString(oapiResolvePath(m_csOverrideFilename.c_str())));
+#endif
 
     if (overrideFileExists)
         m_csConfigFilenames.Format("%s + %s", GetDefaultFilename(), GetOverrideFilename());

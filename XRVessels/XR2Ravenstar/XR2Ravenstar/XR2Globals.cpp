@@ -128,12 +128,12 @@ const char *DATA_HUD_VALUES[] =
     "CTRL-NUMPAD7", "Attitude Hold: Reset Pitch/AOA",
     "CTRL-NUMPAD1", "Attitude Hold: Reset Both (level)",
     "NUMPAD9",      "Attitude Hold: Toggle AOA/Pitch Hold",
-    "NUMPAD2",      "Attitude Hold: Inc Pitch/AOA 2.5°",
-    "NUMPAD8",      "Attitude Hold: Dec Pitch/AOA 2.5°",
-    "ALT-NUMPAD2",  "Attitude Hold: Inc Pitch/AOA 0.5°",
-    "ALT-NUMPAD8",  "Attitude Hold: Dec Pitch/AOA 0.5°",
-    "NUMPAD4",      "Attitude Hold: Bank Left 5°",
-    "NUMPAD6",      "Attitude Hold: Bank Right 5°",
+    "NUMPAD2",      "Attitude Hold: Inc Pitch/AOA 2.5ï¿½",
+    "NUMPAD8",      "Attitude Hold: Dec Pitch/AOA 2.5ï¿½",
+    "ALT-NUMPAD2",  "Attitude Hold: Inc Pitch/AOA 0.5ï¿½",
+    "ALT-NUMPAD8",  "Attitude Hold: Dec Pitch/AOA 0.5ï¿½",
+    "NUMPAD4",      "Attitude Hold: Bank Left 5ï¿½",
+    "NUMPAD6",      "Attitude Hold: Bank Right 5ï¿½",
 
     "CTRL-NUMPAD8",  "Descent Hold: Increase Rate 2.5 m/s",
     "CTRL-NUMPAD2",  "Descent Hold: Decrease Rate 2.5 m/s",
@@ -536,7 +536,7 @@ const double NEUTRAL_CENTER_OF_LIFT = 0.0;  // in meters  (makes ship stable lan
 //
 // Globals
 //
-HMODULE g_hDLL;  // our DLL handle
+XRModuleHandle g_hDLL;  // our module handle
 
 const double MAX_DESCENT_HOLD_RATE = 990;   // in m/s (1.22 and earlier: was 250 m/s)
 const double ADRATE_SMALL = 0.1;

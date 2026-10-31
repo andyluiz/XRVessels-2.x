@@ -31,6 +31,7 @@
 // ==============================================================
 
 #pragma once
+#include "XRPanelPen.h"
 
 #include "Orbitersdk.h"
 #include "Vessel3Ext.h"

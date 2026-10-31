@@ -85,8 +85,8 @@ public:
 
 protected:
     // additional resources
-    HBRUSH m_brush2, m_brush3;
-    HPEN m_pen0;
+    XRPanelBrush m_brush2, m_brush3;
+    XRPanelPen m_pen0;
     DWORD m_color2, m_color3;
 };
 

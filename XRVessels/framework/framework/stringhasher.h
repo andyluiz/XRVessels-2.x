@@ -29,7 +29,9 @@
 #include <string>
 #include <unordered_map>
 
+#ifdef _WIN32
 using namespace stdext;
+#endif
 using namespace std;
 
 class stringhasher

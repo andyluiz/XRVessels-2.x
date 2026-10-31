@@ -27,7 +27,7 @@
 // Instrument panels for the DG-XR1.
 // ==============================================================
 
-#include "OrbiterSDK.h"
+#include "Orbitersdk.h"
 #include "resource.h"
 #include "AreaIDs.h"
 
@@ -369,4 +369,3 @@ bool XR1VCPassenger4InstrumentPanel::Activate()
 
     return true;
 }
-

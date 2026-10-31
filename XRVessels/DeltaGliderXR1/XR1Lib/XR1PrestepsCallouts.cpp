@@ -20,6 +20,7 @@
 **/
 
 #include "DeltaGliderXR1.h"
+#include <climits>
 #include "XR1PreSteps.h"
 #include "XRPayloadBay.h"
 
@@ -374,7 +375,7 @@ void MachCalloutsPreStep::clbkPrePostStep(const double simt, const double simdt,
 
     if (!groundContact && (mach <= 0))  // prevent resets when on ground
     {
-        m_previousMach = MAXLONG;   // out of the atmosphere
+        m_previousMach = INT_MAX;   // out of the atmosphere
         return;     // nothing more to do
     }
 

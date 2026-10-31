@@ -28,7 +28,11 @@
 // ==============================================================
 
 #include "TextBox.h"
-#include "DeltaGliderXR1.h"
+#ifndef _WIN32
+#include "XRPanelText.h"
+#endif
+
+#include <algorithm>
 
 // base class for all TextBox objects
 // screenLineCount = # of text lines on the screen
@@ -57,6 +61,7 @@ bool TextBox::Render(HDC hDC, int topY, HFONT font, int lineSpacing, bool forceR
         // text has changed; must re-render this box
         retVal = true;        
 
+#ifdef _WIN32
         HFONT prevFont = (HFONT)SelectObject(hDC, font);   // save previous font and select new font
         if (m_bgColor == CWHITE)
         {
@@ -69,6 +74,13 @@ bool TextBox::Render(HDC hDC, int topY, HFONT font, int lineSpacing, bool forceR
         }
 
         SetTextAlign(hDC, TA_LEFT);
+#else
+        hDC->save();
+        hDC->setFont(*font);
+        hDC->setBackgroundMode(m_bgColor == CWHITE ? Qt::TransparentMode : Qt::OpaqueMode);
+        if (m_bgColor != CWHITE)
+            hDC->setBackground(QColor(GetRValue(m_bgColor), GetGValue(m_bgColor), GetBValue(m_bgColor)));
+#endif
 
         int cy = topY + 1;  // top spacing
         int cx = 3;         // left side spacing
@@ -87,7 +99,14 @@ bool TextBox::Render(HDC hDC, int topY, HFONT font, int lineSpacing, bool forceR
                 startingLineNumber = bufferLineCount - m_screenLineCount + 1;    // bottom n lines in buffer (index is 1-based)
         }
         else if (startingLineNumber > bufferLineCount)   // out-of-range?
+        {
+#ifdef _WIN32
+            SelectObject(hDC, prevFont);
+#else
+            hDC->restore();
+#endif
             return false;     // can't render anything (don't want to throw exception here b/c we don't want to CTD for this)
+        }
 
         // loop thorough lines in vector, which has 0-based index
         const int startingLineIndex = startingLineNumber-1;     // 0-based
@@ -97,15 +116,25 @@ bool TextBox::Render(HDC hDC, int topY, HFONT font, int lineSpacing, bool forceR
             const TextLine &line = m_textLineGroup.GetLine(i);
             const char *pText = line.text.c_str();
 
-            SetTextColor(hDC, (line.color == TEXTCOLOR::Normal ? m_normalTextColor : m_highlightTextColor));
+            const COLORREF color = line.color == TEXTCOLOR::Normal ? m_normalTextColor : m_highlightTextColor;
+#ifdef _WIN32
+            SetTextColor(hDC, color);
             TextOut(hDC, cx, cy, pText, static_cast<int>(line.text.length()));
+#else
+            hDC->setPen(QColor(GetRValue(color), GetGValue(color), GetBValue(color)));
+            hDC->drawText(cx, cy + hDC->fontMetrics().ascent(), XRPanelText(pText, static_cast<int>(line.text.length())));
+#endif
 
             // drop to next line
             cy += lineSpacing;
         }
 
         // restore previous font
+#ifdef _WIN32
         SelectObject(hDC, prevFont);
+#else
+        hDC->restore();
+#endif
     }
 
     return retVal;
@@ -135,27 +164,16 @@ void TextLineGroup::AddLines(const char *pStr, bool highlighted)
 {
     m_addLinesCount++;      // text has changed now
 
-    // mark a working copy and parse it into separate lines
-    char temp[MAX_MESSAGE_LENGTH];
-    strcpy(temp, pStr);
-
-    char *pStart = temp;
-    bool cont = true;
-    while (cont)
+    // Split the text without copying it into a fixed-size Win32 buffer.
+    const std::string text(pStr);
+    size_t start = 0;
+    for (;;)
     {
-        char *pEnd = strchr(pStart, '&');
-        if (pEnd)   // found a newline?
-        {
-            *pEnd = 0;     // terminate line
-        }
-        else
-            cont = false;   // this is the last line
-
-        TextLine textLine(pStart, (highlighted ? TEXTCOLOR::Highlighted : TEXTCOLOR::Normal));
-        AddLine(textLine);
-
-        if (pEnd)
-            pStart = pEnd + 1;  // set to start of next line
+        const size_t end = text.find('&', start);
+        const std::string line = text.substr(start, end == std::string::npos ? end : end - start);
+        AddLine(TextLine(line.c_str(), highlighted ? TEXTCOLOR::Highlighted : TEXTCOLOR::Normal));
+        if (end == std::string::npos) break;
+        start = end + 1;
     }
 }
 
@@ -176,4 +194,3 @@ void TextLineGroup::AddLine(const TextLine &textLine)
         m_lines.erase(m_lines.begin());  // ...and remove the line ptr from the vector
     }
 }
-

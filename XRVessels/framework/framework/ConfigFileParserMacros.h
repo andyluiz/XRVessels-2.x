@@ -25,6 +25,12 @@
 // ==============================================================
 
 #pragma once
+#ifndef _WIN32
+#include <strings.h>
+#include <cstring>
+#define _stricmp strcasecmp
+#define _strnicmp strncasecmp
+#endif
 
 // convenience macros
 // Note: by design, string comparisons are case-insensitive

@@ -28,6 +28,8 @@
 #include "VesselAPI.h"
 #include "XRPayloadBay.h"
 #include "FileList.h"
+#include "XRAssert.h"
+#include "XRTemplates.h"
 #include <string>
 #include <string.h>
 
@@ -58,7 +60,8 @@ const XRPayloadClassData &XRPayloadClassData::GetXRPayloadClassDataForClassname(
     XRPayloadClassData *pRetVal = nullptr;
 
     // pull the data from cache, which was already pre-populated with all .cfg files in the system
-    auto it = s_classnameToXRPayloadClassDataMap.find(&string(pClassname));
+    const string classname(pClassname);
+    auto it = s_classnameToXRPayloadClassDataMap.find(&classname);
     if (it != s_classnameToXRPayloadClassDataMap.end())
     {
         // object is in cache: return it
@@ -67,7 +70,8 @@ const XRPayloadClassData &XRPayloadClassData::GetXRPayloadClassDataForClassname(
     else   // something goofy is going on: there is no .cfg for this vessel under Config\Vessels
     {
         // return the default PCD 
-        pRetVal = s_classnameToXRPayloadClassDataMap.find(&string(XRPAYLOAD_BAY_CLASSNAME))->second;  // will always succeed
+        const string fallback(XRPAYLOAD_BAY_CLASSNAME);
+        pRetVal = s_classnameToXRPayloadClassDataMap.find(&fallback)->second;  // will always succeed
     }
 
     return *pRetVal;
@@ -77,21 +81,12 @@ const XRPayloadClassData &XRPayloadClassData::GetXRPayloadClassDataForClassname(
 // ExitModule method.
 void XRPayloadClassData::Terminate()
 {
-    // walk through the global cache and free up memory
-    // this will also free up all data objects referenced by s_allXRPayloadEnabledClassData
-    auto it = s_classnameToXRPayloadClassDataMap.begin();
-    for (; it != s_classnameToXRPayloadClassDataMap.end(); it++)
-    {
-        // NOTE: no reason to invoke erase() on the individual map items: they will be freed along with the hashmap object
-        const string *pClassname = it->first;
-        const XRPayloadClassData *pObj = it->second;
-
-        delete pClassname;   
-        delete pObj;
-    }
-
-    // delete the static s_allXRPayloadEnabledClassData array
-    delete s_allXRPayloadEnabledClassData;      // do not use 'delete []' here; objects in the array were already freed above
+    // The module can remain loaded after a scenario ends. Remove the entries
+    // as well as their contents so the next scenario can initialize afresh.
+    ClearOwnedPointerMap(s_classnameToXRPayloadClassDataMap,
+        [](const string *name, XRPayloadClassData *data) { delete name; delete data; });
+    delete[] s_allXRPayloadEnabledClassData;
+    s_allXRPayloadEnabledClassData = nullptr;
 }
 
 // Payload vessles MUST invoke this static method before the simulation begins (typically from clbkPostCreation) so that all Orbiter vessel .cfg files are parsed.
@@ -150,8 +145,13 @@ void XRPayloadClassData::InitializeXRPayloadClassData()
 XRPayloadClassData::XRPayloadClassData(const char *pConfigFilespec, const char *pClassname) :
     m_hThumbnailBitmap(nullptr)
 {
+#ifdef _WIN32
     m_pClassname = _strdup(pClassname);
     m_pConfigFilespec = _strdup(pConfigFilespec);
+#else
+    m_pClassname = strdup(pClassname);
+    m_pConfigFilespec = strdup(pConfigFilespec);
+#endif
     
     // set default values; these are overridden by values in the config file, if any
     m_isXRPayloadEnabled = false;     // default is FALSE
@@ -252,13 +252,26 @@ XRPayloadClassData::XRPayloadClassData(const char *pConfigFilespec, const char *
     // Orbiter.exe is running.
     static char pFullThumbnailPath[1024];    
     sprintf(pFullThumbnailPath, "Config\\%s", pThumbnailPath);
+#ifdef _WIN32
     m_hThumbnailBitmap = (HBITMAP)LoadImage(0, pFullThumbnailPath, IMAGE_BITMAP, PAYLOAD_THUMBNAIL_DIMX, PAYLOAD_THUMBNAIL_DIMY, LR_LOADFROMFILE);  // will be null if load failed
+#else
+    auto loadThumbnail = [](const char *path) -> XRBitmap {
+        const QImage image(QString::fromStdString(oapiResolvePath(path)));
+        if (image.isNull()) return nullptr;
+        return new QImage(image.scaled(PAYLOAD_THUMBNAIL_DIMX, PAYLOAD_THUMBNAIL_DIMY));
+    };
+    m_hThumbnailBitmap = loadThumbnail(pFullThumbnailPath);
+#endif
     if (m_hThumbnailBitmap == nullptr)
     {
         // Bad thumbnail path!  Switch to the default thumbnail.
         // Note: it is too early for oapiDebugString() to work, and we don't have access to the XR log, so we don't bother logging a message here.
         sprintf(pFullThumbnailPath, "Config\\%s", DEFAULT_PAYLOAD_THUMBNAIL_PATH);  // reset to default thumbnail
+#ifdef _WIN32
         m_hThumbnailBitmap = (HBITMAP)LoadImage(0, pFullThumbnailPath, IMAGE_BITMAP, PAYLOAD_THUMBNAIL_DIMX, PAYLOAD_THUMBNAIL_DIMY, LR_LOADFROMFILE);  // will be null if load failed, but default should always succeed
+#else
+        m_hThumbnailBitmap = loadThumbnail(pFullThumbnailPath);
+#endif
     }
 }
 
@@ -285,7 +298,7 @@ XRPayloadClassData::~XRPayloadClassData()
 
     // free the thumbnail bitmap, if any
     if (m_hThumbnailBitmap != nullptr)
-        DeleteObject(m_hThumbnailBitmap);
+        XRDeleteBitmap(m_hThumbnailBitmap);
 }
 
 // Add an explicit attachment point to which this object may dock.
@@ -296,7 +309,8 @@ void XRPayloadClassData::AddExplicitAttachmentSlot(const char *pParentVesselClas
 {
     vector<int> *pSlotList = nullptr;  // assume not found
     
-    auto it = m_explicitAttachmentSlotsMap.find(&string(pParentVesselClassname));
+    const string classname(pParentVesselClassname);
+    auto it = m_explicitAttachmentSlotsMap.find(&classname);
     
     // did we find an existing slot list of the specified vessel class?
     if (it != m_explicitAttachmentSlotsMap.end())
@@ -319,7 +333,8 @@ void XRPayloadClassData::AddExplicitAttachmentSlot(const char *pParentVesselClas
 // Returns true if any explicit bay slots are defined for the specified vessel classname.
 bool XRPayloadClassData::AreAnyExplicitAttachmentSlotsDefined(const char *pParentVesselClassname) const
 {
-    auto it = m_explicitAttachmentSlotsMap.find(&string(pParentVesselClassname));
+    const string classname(pParentVesselClassname);
+    auto it = m_explicitAttachmentSlotsMap.find(&classname);
     return (it != m_explicitAttachmentSlotsMap.end());
 }
 
@@ -328,7 +343,8 @@ bool XRPayloadClassData::IsExplicitAttachmentSlotAllowed(const char *pParentVess
 {
     bool retVal = true;     // assume vessel not found
 
-    auto it = m_explicitAttachmentSlotsMap.find(&string(pParentVesselClassname));
+    const string classname(pParentVesselClassname);
+    auto it = m_explicitAttachmentSlotsMap.find(&classname);
     if (it != m_explicitAttachmentSlotsMap.end())
     {
         retVal = false;     // slot denied now unless explicitly found in the slot list below
@@ -362,7 +378,7 @@ const XRPayloadClassData **XRPayloadClassData::GetAllAvailableXRPayloads()
         VECTOR_XRPAYLOAD allXRPayloads;
 
         // Walk through each XRPayloadClassData in our s_classnameToXRPayloadClassDataMap and copy all XRPayload-enabled ones to our master s_allXRPayloadEnabledClassData 
-        unordered_map<const string *, XRPayloadClassData *>::const_iterator it = s_classnameToXRPayloadClassDataMap.begin();  // iterate over values
+        auto it = s_classnameToXRPayloadClassDataMap.begin();  // iterate over values
         for (; it != s_classnameToXRPayloadClassDataMap.end(); it++)
         {
             const XRPayloadClassData *pPCD = it->second;  // get next PCD

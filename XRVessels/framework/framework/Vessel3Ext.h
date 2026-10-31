@@ -26,26 +26,43 @@
 
 #pragma once
 
-#include "windows.h"
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include "OrbiterPlatform.h"
+#endif
 #include "XRVesselCtrl.h"
+#include "XRAssert.h"
+#include "XRModuleHandle.h"
 #include "XRGrappleTargetVessel.h"
 #include "stringhasher.h"
 #include "PropType.h"
 #include "VesselConfigFileParser.h"
+#ifdef _WIN32
 #include "RegKeyManager.h"
+#else
+#include "XRRenderWindow.h"
+#endif
 
 #include <unordered_map>
 #include <vector>
+#ifndef _WIN32
+#include <chrono>
+#endif
 
 // redefine oapiGetSimTime as a compile-time error to prevent XR code from accidentally invoking it
 // Note: ideally I would like to have this invoke '#error foo' to generate an elegant message, but there's no way to declare that
 #define oapiGetSimTime ERROR! "Do not invoke oapiGetSimTime: see comment block in VESSEL3_EXT::clbkPreStep for details"
 
+#ifdef _WIN32
 #define XR_GLOBAL_SETTINGS_REG_KEY "SOFTWARE\\AlteaAerospace\\XR"   // under HKEY_CURRENT_USER
+#endif
 
 #define MAX_VELOCITY_FOR_WHEEL_STOP 0.04		  // max meters-per-second the ship can be moving and still be considered wheel-stop (used by IsLanded(); determines when parking brakes engage, for example).
 
+#ifdef _WIN32
 using namespace stdext;
+#endif
 using namespace std;
 
 class Area;
@@ -81,17 +98,23 @@ public:
     VESSEL3_EXT(OBJHANDLE vessel, int fmodel = 1);
     virtual ~VESSEL3_EXT();
 
+	#ifdef _WIN32
 	RegKeyManager m_regKeyManager;		// for global Orbiter-independent XR settings
+	#endif
 	
 	// Note: returns 0 if Orbiter is full-screen
+	#ifdef _WIN32
 	static HWND GetOrbiterRenderWindowHandle()
 	{
 		return ::FindWindow("Orbiter Render Window", nullptr);
 	}
+	#else
+	static QWindow *GetOrbiterRenderWindowHandle() { return XRRenderWindow(); }
+	#endif
 
-	HMODULE GetModuleHandle() { return m_hModule; }
+	XRModuleHandle GetModuleHandle() { return m_hModule; }
 
-    void SetModuleHandle(const HMODULE hModule) { m_hModule = hModule; }
+    void SetModuleHandle(const XRModuleHandle hModule) { m_hModule = hModule; }
     void AddInstrumentPanel(InstrumentPanel *pPanel, const int panelWidth);
     void AddPreStep(PrePostStep *pPostStep);
     void AddPostStep(PrePostStep *pPreStep);
@@ -140,11 +163,15 @@ public:
     // Note: it is OK for this method to be static without a mutex because Orbiter is single-threaded
     static double GetSystemUptime()
     {
+#ifdef _WIN32
         // Even though we lose some precision going from 2^64 max down to 2^53 (53 bits mantissia in a double), that's still enough
         // precision to track 104,249,991.37 days, or 285,616 years of uptime right down to the millisecond.  
         // See https://stackoverflow.com/questions/1848700/biggest-integer-that-can-be-stored-in-a-double
         const double uptimeMilli = static_cast<double>(GetTickCount64());  // GetTickCount64 requires Vista or higher, but that is our minimum target OS anyway
         return (uptimeMilli / 1000);  // convert to seconds
+#else
+        return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+#endif
     }
     
     //----------------------------------------------------------------------------
@@ -226,7 +253,7 @@ private:
 	int m_videoWindowHeight;					 // in pixels; 0 = UNKNOWN (NOT PARSED YET)
     int m_lastVideoWindowWidth;                  // previous m_videoWindowWidth value; -1 = not set 
     int m_last2DPanelWidth;                      // 2D panel width for m_lastVideoWindowWidth; e.g., 1280, 1600, 1920
-    HMODULE m_hModule;
+    XRModuleHandle m_hModule;
     bool m_hasFocus;                             // true if we are in focus (i.e., we are the active ship), false if not
     unordered_map<int, InstrumentPanel *> m_panelMap; // map of all instrument panels: key = (panelWidth * 1000) + panel ID, value = InstrumentPanel *
     vector<PrePostStep *> m_postStepVector;      // list of PrePostStep objects; may be empty

@@ -148,9 +148,15 @@ void ArtificialHorizonArea::Activate()
     SetSurfaceColorKey(m_mainSurface, 0xFF000000);  // black = transparent
 
     // load brushes, pens, and colors
+#ifdef _WIN32
     m_brush2 = CreateSolidBrush(RGB(80,80,224));  // blue
     m_brush3 = CreateSolidBrush(RGB(160,120,64)); // brown
     m_pen0   = CreatePen(PS_SOLID, 1, RGB(224,224,224));
+#else
+    m_brush2 = new QBrush(QColor(80,80,224));
+    m_brush3 = new QBrush(QColor(160,120,64));
+    m_pen0 = new QPen(QColor(224,224,224), 1);
+#endif
     m_color2 = oapiGetColour(80,80,224);
     m_color3 = oapiGetColour(160,120,64);
 }
@@ -158,9 +164,15 @@ void ArtificialHorizonArea::Activate()
 // Deactivate this area
 void ArtificialHorizonArea::Deactivate()
 {
+#ifdef _WIN32
     DeleteObject(m_brush2);
     DeleteObject(m_brush3);
     DeleteObject(m_pen0);
+#else
+    delete m_brush2;
+    delete m_brush3;
+    delete m_pen0;
+#endif
     // do not delete colors
 
     XR1Area::Deactivate();  // let our superclass clean up
@@ -282,26 +294,53 @@ bool ArtificialHorizonArea::Redraw2D(const int event, const SURFHANDLE surf)
     oapiClearSurface (surf, bblue ? m_color3 : m_color2);
 
     HDC hDC = GetDC (surf);
+#ifdef _WIN32
     SelectObject (hDC, GetStockObject (BLACK_PEN));
+#else
+    hDC->save();
+    hDC->setPen(Qt::black);
+    auto polygon = [&pt, hDC](int count) {
+        QPolygon shape;
+        for (int index = 0; index < count; ++index)
+            shape << QPoint(pt[index].x, pt[index].y);
+        hDC->drawPolygon(shape);
+    };
+#endif
 
     if (n >= 3)
     {
+#ifdef _WIN32
         SelectObject (hDC, (bblue ? m_brush2 : m_brush3));
         Polygon (hDC, pt, n);
         SelectObject (hDC, m_pen0);
         MoveToEx (hDC, pt[0].x, pt[0].y, nullptr); LineTo (hDC, pt[1].x, pt[1].y);
+#else
+        hDC->setBrush(*(bblue ? m_brush2 : m_brush3));
+        polygon(n);
+        hDC->setPen(*m_pen0);
+        hDC->drawLine(pt[0].x, pt[0].y, pt[1].x, pt[1].y);
+#endif
     }
 
     // bank indicator
+#ifdef _WIN32
     SelectObject (hDC, m_pen0);
     SelectObject (hDC, GetStockObject (NULL_BRUSH));
+#else
+    hDC->setPen(*m_pen0);
+    hDC->setBrush(Qt::NoBrush);
+#endif
     static double r1 = 40, r2 = 35;
     double sinb1 = sin(bank-0.1), cosb1 = cos(bank-0.1);
     double sinb2 = sin(bank+0.1), cosb2 = cos(bank+0.1);
     pt[0].x = static_cast<int>(r2*sinb1+0.5)+size; pt[0].y = -static_cast<int>(r2*cosb1+0.5)+size;
     pt[1].x = static_cast<int>(r1*sinb+0.5)+size;  pt[1].y = -static_cast<int>(r1*cosb+0.5)+size;
     pt[2].x = static_cast<int>(r2*sinb2+0.5)+size; pt[2].y = -static_cast<int>(r2*cosb2+0.5)+size;
+#ifdef _WIN32
     Polygon (hDC, pt, 3);
+#else
+    polygon(3);
+#endif
 
     // pitch ladder
     static double d = size*(10.0*RAD)/prange;
@@ -318,12 +357,20 @@ bool ArtificialHorizonArea::Redraw2D(const int event, const SURFHANDLE surf)
     {
         if (iphi)
         {
+#ifdef _WIN32
             MoveToEx (hDC, size+static_cast<int>(xll), size+static_cast<int>(yll), nullptr);
             LineTo   (hDC, size+static_cast<int>(xlr), size+static_cast<int>(ylr));
+#else
+            hDC->drawLine(size+static_cast<int>(xll), size+static_cast<int>(yll),
+                          size+static_cast<int>(xlr), size+static_cast<int>(ylr));
+#endif
         }
         xlr -= dsinb, ylr += dcosb;
         xll -= dsinb, yll += dcosb;
     }
+#ifndef _WIN32
+    hDC->restore();
+#endif
     ReleaseDC (surf, hDC);
 
     // labels

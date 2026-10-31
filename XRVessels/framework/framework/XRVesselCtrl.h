@@ -36,6 +36,9 @@
 #pragma once
 
 #include "orbitersdk.h"
+#ifndef _WIN32
+#include "XRModuleFlag.h"
+#endif
 #include <vector>
 
 using namespace std;
@@ -324,6 +327,9 @@ public:
     // Returns true if the supplied vessel is an XR vessel that supports XRVesselCtrl 1.5 or later
     static bool IsXRVesselCtrl(const VESSEL *pVessel)
     {
+#ifndef _WIN32
+        return XRModuleHasFlag(pVessel, "XRVesselCtrlFlag");
+#else
         // Let's figure out if the supplied vessel implements XRVesselCtrl.
         // Since we can't rely on RTTI here to test vessel objects that do not contain RTTI, we instead check 
         // the status of an exported XRVesselCtrlFlag, if any.
@@ -337,6 +343,7 @@ public:
             // Do not free hDLL handle here! GetModuleHandle does not increment the reference count.
         }
         return retVal;
+#endif
     }
 
     // Constructor

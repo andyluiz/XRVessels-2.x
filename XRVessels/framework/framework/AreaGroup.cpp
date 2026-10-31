@@ -24,7 +24,7 @@
 // Class to manage a group of areas; used as a base class
 // ==============================================================
 
-#include "OrbiterSDK.h"
+#include "Orbitersdk.h"
 #include "AreaGroup.h"
 #include "Area.h"
 
@@ -103,4 +103,3 @@ void AreaGroup::clbkPrePostStep(const double simt, const double simdt, const dou
         pArea->clbkPrePostStep(simt, simdt, mjd);  // default handler for each area is empty
     }
 }
-

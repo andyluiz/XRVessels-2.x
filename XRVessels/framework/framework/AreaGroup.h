@@ -31,7 +31,9 @@
 #include <unordered_map>
 
 using namespace std;
+#ifdef _WIN32
 using namespace stdext;
+#endif
 
 // must use forward reference here to avoid circular dependencies
 class Area;
