@@ -9,6 +9,12 @@ The XR vessels and associated utility projects are open source and licensed unde
 
 Refer to the [XR Flight Operations Manual](./XRVessels/XR%20Flight%20Operations%20Manual.pdf) for details about how to install and fly the XR vessels in Orbiter.
 
+## Project Status
+
+- **Windows / Orbiter 2016:** The XR2 Ravenstar and XR5 Vanguard Release x86 builds have been installed and loaded successfully in a 32-bit Orbiter 2016 installation. This verifies the Windows x86 build and runtime path; x64 was not tested in that installation.
+- **Native Linux port:** Both modules compile and link, and all seven native component tests pass. XR2 has also been exercised in Linux Orbiter, including external and internal views, panel switching, and controls. Linux runtime testing of XR5 is still pending.
+- The XR2's proprietary meshes and textures are not included in this repository. The Windows runtime check used assets from the official XR2 Orbiter 2016 release package; the XR5 assets are included in the repository. Vessel packages and licensed XR2 assets are not added to this source tree.
+
 ## Building the XR Vessels 
 
 You do not need to build the XR vessels in order to use them with Orbiter. However, if you want to build the XR vessels from the source, follow the steps below. These instructions assume you are building both the 32-bit and 64-bit versions. However, you may build only one version if you prefer.
@@ -31,9 +37,9 @@ ctest --test-dir build --output-on-failure
 
 **Both Linux targets compile and link.** The output modules are `build/Modules/XR2Ravenstar.so` and `build/Modules/XR5Vanguard.so`. Their unresolved host references were checked against the configured Linux Orbiter executable; all are exported by that executable. All seven native component tests pass, including Qt drawing and typed cache cleanup.
 
-The Linux build converts both vessels' `.rc` files with Orbiter's resource converter and links Qt Widgets. It uses native file enumeration, bitmap loading, window-position persistence, Qt-backed panel text/drawing, module-owned XR vessel detection without RTTI, and Qt control/payload/scenario-editor dialogs. The Windows paths remain available under `_WIN32`, but were not rebuilt here.
+The Linux build converts both vessels' `.rc` files with Orbiter's resource converter and links Qt Widgets. It uses native file enumeration, bitmap loading, window-position persistence, Qt-backed panel text/drawing, module-owned XR vessel detection without RTTI, and Qt control/payload/scenario-editor dialogs. The Windows x86 Release paths were also rebuilt and loaded successfully in Orbiter 2016; Windows x64 was not tested.
 
-**Build success is not flight validation:** the modules and new dialogs have not been tested inside Orbiter. On Wayland, a compositor may ignore `QWindow::setPosition()` requests. The XR2 mesh and textures are not in this repository and have separate distribution restrictions; compiling the code alone will not make XR2 flyable. This build does not install or package the required vessel assets.
+**Linux runtime status:** XR2 has been tested in Linux Orbiter; XR5 still needs its own Linux runtime test. On Wayland, a compositor may ignore `QWindow::setPosition()` requests. The XR2 mesh and textures are not in this repository and have separate distribution restrictions; compiling the code alone will not make XR2 flyable. This build does not install or package the required vessel assets.
 
 On Linux, the window coordinates are stored in `Config/XRWindowPosition.ini` in the Orbiter root directory (not in the registry). To prevent restoring a saved position, add `DisableWindowPosRestore=1` under `[General]` in that file. Windows continues to use its existing registry settings.
 
