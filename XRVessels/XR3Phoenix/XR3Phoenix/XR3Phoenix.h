@@ -59,7 +59,7 @@ public:
     virtual bool clbkPanelRedrawEvent(int areaID, int event, SURFHANDLE surf);
     virtual bool clbkLoadGenericCockpit();
 
-    virtual void UpdateCtrlDialog(XR3Phoenix *dg, HWND hWnd = nullptr);
+    virtual void UpdateCtrlDialog(XR3Phoenix *dg, XRDialogHandle hWnd = nullptr);
     virtual void DefineAnimations();
 
     virtual bool clbkLoadVC(int id) { return false; }   // Must KEEP THIS LINE to prevent VC from loading!

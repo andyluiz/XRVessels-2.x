@@ -45,7 +45,7 @@
 // --------------------------------------------------------------
 // Module initialisation
 // --------------------------------------------------------------
-DLLCLBK void InitModule (HINSTANCE hModule)
+DLLCLBK void InitModule (XRModuleHandle hModule)
 {
     g_hDLL = hModule;
     oapiRegisterCustomControls(hModule);
@@ -54,7 +54,7 @@ DLLCLBK void InitModule (HINSTANCE hModule)
 // --------------------------------------------------------------
 // Module cleanup
 // --------------------------------------------------------------
-DLLCLBK void ExitModule (HINSTANCE hModule)
+DLLCLBK void ExitModule (XRModuleHandle hModule)
 {
     oapiUnregisterCustomControls(hModule);
     XRPayloadClassData::Terminate();     // clean up global cache
@@ -210,6 +210,7 @@ void XR3Phoenix::ReinitializeDamageableControlSurfaces()
 // Message callback function for control dialog box
 // ==============================================================
 
+#ifdef _WIN32
 INT_PTR CALLBACK XR3Ctrl_DlgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     XR3Phoenix *dg = (uMsg == WM_INITDIALOG ? reinterpret_cast<XR3Phoenix *>(lParam) : reinterpret_cast<XR3Phoenix *>(oapiGetDialogContext(hWnd)));
@@ -325,7 +326,7 @@ INT_PTR CALLBACK XR3Ctrl_DlgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
     return oapiDefDialogProc(hWnd, uMsg, wParam, lParam);
 }
 
-void XR3Phoenix::UpdateCtrlDialog(XR3Phoenix *dg, HWND hWnd)
+void XR3Phoenix::UpdateCtrlDialog(XR3Phoenix *dg, XRDialogHandle hWnd)
 {
     static int bstatus[2] = {BST_UNCHECKED, BST_CHECKED};
     
@@ -388,6 +389,77 @@ void XR3Phoenix::UpdateCtrlDialog(XR3Phoenix *dg, HWND hWnd)
     op = static_cast<int>(dg->beacon[5].active) ? 1:0;
     SendDlgItemMessage (hWnd, IDC_STROBELIGHT, BM_SETCHECK, bstatus[op], 0);
 }
+#else
+void XR3Ctrl_DlgProc(QWidget *dialog, void *context)
+{
+    auto *dg = static_cast<XR3Phoenix *>(context);
+    if (!dg || !dialog) return;
+#define XR_DOOR(id, method, state) XRConnectDialogButton(dialog, #id, [dg] { dg->method(DoorStatus::state); })
+    XR_DOOR(IDC_GEAR_UP, ActivateLandingGear, DOOR_CLOSING);
+    XR_DOOR(IDC_GEAR_DOWN, ActivateLandingGear, DOOR_OPENING);
+    XR_DOOR(IDC_RETRO_CLOSE, ActivateRCover, DOOR_CLOSING);
+    XR_DOOR(IDC_RETRO_OPEN, ActivateRCover, DOOR_OPENING);
+    XR_DOOR(IDC_BAY_CLOSE, ActivateBayDoors, DOOR_CLOSING);
+    XR_DOOR(IDC_BAY_OPEN, ActivateBayDoors, DOOR_OPENING);
+    XR_DOOR(IDC_OLOCK_CLOSE, ActivateOuterAirlock, DOOR_CLOSING);
+    XR_DOOR(IDC_OLOCK_OPEN, ActivateOuterAirlock, DOOR_OPENING);
+    XR_DOOR(IDC_ILOCK_CLOSE, ActivateInnerAirlock, DOOR_CLOSING);
+    XR_DOOR(IDC_ILOCK_OPEN, ActivateInnerAirlock, DOOR_OPENING);
+    XR_DOOR(IDC_HOVER_CLOSE, ActivateHoverDoors, DOOR_CLOSING);
+    XR_DOOR(IDC_HOVER_OPEN, ActivateHoverDoors, DOOR_OPENING);
+    XR_DOOR(IDC_DOCKING_DEPLOY, ActivateNoseCone, DOOR_OPENING);
+    XR_DOOR(IDC_ELEVATOR_STOW, ActivateElevator, DOOR_CLOSING);
+    XR_DOOR(IDC_ELEVATOR_DEPLOY, ActivateElevator, DOOR_OPENING);
+    XR_DOOR(IDC_SCRAM_CLOSE, ActivateScramDoors, DOOR_CLOSING);
+    XR_DOOR(IDC_SCRAM_OPEN, ActivateScramDoors, DOOR_OPENING);
+    XR_DOOR(IDC_HATCH_CLOSE, ActivateHatch, DOOR_CLOSING);
+    XR_DOOR(IDC_HATCH_OPEN, ActivateHatch, DOOR_OPENING);
+    XR_DOOR(IDC_RADIATOR_STOW, ActivateRadiator, DOOR_CLOSING);
+    XR_DOOR(IDC_RADIATOR_DEPLOY, ActivateRadiator, DOOR_OPENING);
+#undef XR_DOOR
+    XRConnectDialogButton(dialog, "IDC_DOCKING_STOW", [dg] {
+        dg->ActivateOuterAirlock(DoorStatus::DOOR_CLOSING);
+        dg->ActivateNoseCone(DoorStatus::DOOR_CLOSING);
+    });
+    XRConnectDialogButton(dialog, "IDC_NAVLIGHT", [dg](bool checked) { dg->SetNavlight(checked); });
+    XRConnectDialogButton(dialog, "IDC_BEACONLIGHT", [dg](bool checked) { dg->SetBeacon(checked); });
+    XRConnectDialogButton(dialog, "IDC_STROBELIGHT", [dg](bool checked) { dg->SetStrobe(checked); });
+    dg->UpdateCtrlDialog(dg, dialog);
+}
+
+void XR3Phoenix::UpdateCtrlDialog(XR3Phoenix *dg, XRDialogHandle dialog)
+{
+    if (!dialog) dialog = oapiFindDialog(g_hDLL, IDD_CTRL);
+    if (!dialog) return;
+#define XR_CHECK(id, value) XRSetDialogCheck(dialog, #id, (static_cast<int>(value) & 1) != 0)
+    XR_CHECK(IDC_GEAR_DOWN, dg->gear_status);
+    XR_CHECK(IDC_GEAR_UP, static_cast<int>(dg->gear_status) ^ 1);
+    XR_CHECK(IDC_RETRO_OPEN, dg->rcover_status);
+    XR_CHECK(IDC_RETRO_CLOSE, static_cast<int>(dg->rcover_status) ^ 1);
+    XR_CHECK(IDC_BAY_OPEN, dg->bay_status);
+    XR_CHECK(IDC_BAY_CLOSE, static_cast<int>(dg->bay_status) ^ 1);
+    XR_CHECK(IDC_OLOCK_OPEN, dg->olock_status);
+    XR_CHECK(IDC_OLOCK_CLOSE, static_cast<int>(dg->olock_status) ^ 1);
+    XR_CHECK(IDC_ILOCK_OPEN, dg->ilock_status);
+    XR_CHECK(IDC_ILOCK_CLOSE, static_cast<int>(dg->ilock_status) ^ 1);
+    XR_CHECK(IDC_HOVER_OPEN, dg->hoverdoor_status);
+    XR_CHECK(IDC_HOVER_CLOSE, static_cast<int>(dg->hoverdoor_status) ^ 1);
+    XR_CHECK(IDC_DOCKING_DEPLOY, dg->nose_status);
+    XR_CHECK(IDC_DOCKING_STOW, static_cast<int>(dg->nose_status) ^ 1);
+    XR_CHECK(IDC_ELEVATOR_DEPLOY, dg->crewElevator_status);
+    XR_CHECK(IDC_ELEVATOR_STOW, static_cast<int>(dg->crewElevator_status) ^ 1);
+    XR_CHECK(IDC_SCRAM_OPEN, dg->scramdoor_status);
+    XR_CHECK(IDC_SCRAM_CLOSE, static_cast<int>(dg->scramdoor_status) ^ 1);
+    XR_CHECK(IDC_HATCH_OPEN, dg->hatch_status);
+    XR_CHECK(IDC_HATCH_CLOSE, static_cast<int>(dg->hatch_status) ^ 1);
+    XR_CHECK(IDC_RADIATOR_DEPLOY, dg->radiator_status);
+    XR_CHECK(IDC_RADIATOR_STOW, static_cast<int>(dg->radiator_status) ^ 1);
+#undef XR_CHECK
+    XRSetDialogCheck(dialog, "IDC_NAVLIGHT", dg->beacon[0].active);
+    XRSetDialogCheck(dialog, "IDC_BEACONLIGHT", dg->beacon[3].active);
+    XRSetDialogCheck(dialog, "IDC_STROBELIGHT", dg->beacon[5].active);
+}
+#endif
 
 // toggle RCS docking mode
 // rcsMode: true = set docking mode, false = set normal mode
@@ -962,5 +1034,5 @@ DWORD XR3Phoenix::MeshTextureIDToTextureIndex(const int meshTextureID, MESHHANDL
     _ASSERTE(false);  // should never reach here!
 
     hMesh = nullptr;      
-    return MAXDWORD;   // bogus
+    return static_cast<DWORD>(-1);   // bogus
 }

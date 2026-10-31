@@ -22,7 +22,15 @@
 #include "DeltaGliderXR1.h"
 #include "ScnEditorAPI.h"
 #include "DlgCtrl.h"
+#include "XRControlDialog.h"
 
+#ifndef _WIN32
+#include <QLabel>
+#include <QWidget>
+#include <cmath>
+#endif
+
+#ifdef _WIN32
 static HELPCONTEXT g_hc = {
     "html/vessels/deltaglider.chm",
         0,
@@ -258,3 +266,76 @@ DLLCLBK void secInit (HWND hEditor, OBJHANDLE vessel)
     EditorPageSpec eps3 = {"Damage", g_hDLL, IDD_EDITOR_PG3, EdPg3Proc};
     SendMessage (hEditor, WM_SCNEDITOR, SE_ADDPAGEBUTTON, reinterpret_cast<LPARAM>(&eps3));
 }
+#else
+static void InitializeAnimationPage(QWidget *page, void *context)
+{
+    auto *vessel = static_cast<DeltaGliderXR1 *>(oapiGetVesselInterface(static_cast<OBJHANDLE>(context)));
+    if (!vessel) return;
+
+#define XR_ANIM(id, method, state) XRConnectDialogButton(page, #id, [vessel] { \
+        vessel->method(DoorStatus::state); \
+    })
+    XR_ANIM(IDC_GEAR_UP, ActivateLandingGear, DOOR_CLOSED);
+    XR_ANIM(IDC_GEAR_DOWN, ActivateLandingGear, DOOR_OPEN);
+    XR_ANIM(IDC_RETRO_CLOSE, ActivateRCover, DOOR_CLOSED);
+    XR_ANIM(IDC_RETRO_OPEN, ActivateRCover, DOOR_OPEN);
+    XR_ANIM(IDC_NCONE_CLOSE, ActivateNoseCone, DOOR_CLOSED);
+    XR_ANIM(IDC_NCONE_OPEN, ActivateNoseCone, DOOR_OPEN);
+    XR_ANIM(IDC_OLOCK_CLOSE, ActivateOuterAirlock, DOOR_CLOSED);
+    XR_ANIM(IDC_OLOCK_OPEN, ActivateOuterAirlock, DOOR_OPEN);
+    XR_ANIM(IDC_ILOCK_CLOSE, ActivateInnerAirlock, DOOR_CLOSED);
+    XR_ANIM(IDC_ILOCK_OPEN, ActivateInnerAirlock, DOOR_OPEN);
+    XR_ANIM(IDC_LADDER_RETRACT, ActivateLadder, DOOR_CLOSED);
+    XR_ANIM(IDC_LADDER_EXTEND, ActivateLadder, DOOR_OPEN);
+    XR_ANIM(IDC_HATCH_CLOSE, ActivateHatch, DOOR_CLOSED);
+    XR_ANIM(IDC_HATCH_OPEN, ActivateHatch, DOOR_OPEN);
+    XR_ANIM(IDC_RADIATOR_RETRACT, ActivateRadiator, DOOR_CLOSED);
+    XR_ANIM(IDC_RADIATOR_EXTEND, ActivateRadiator, DOOR_OPEN);
+#undef XR_ANIM
+}
+
+static void InitializeDamagePage(QWidget *page, void *context)
+{
+    auto *vessel = static_cast<DeltaGliderXR1 *>(oapiGetVesselInterface(static_cast<OBJHANDLE>(context)));
+    if (!vessel) return;
+
+    auto *leftGauge = qobject_cast<GaugeCtrl *>(page->findChild<QWidget *>("IDC_LEFTWING_SLIDER"));
+    auto *rightGauge = qobject_cast<GaugeCtrl *>(page->findChild<QWidget *>("IDC_RIGHTWING_SLIDER"));
+    if (!leftGauge || !rightGauge) return;
+
+    GAUGEPARAM params = {0, 100, GAUGEPARAM::LEFT, GAUGEPARAM::BLACK};
+    oapiSetGaugeParams(leftGauge, &params);
+    oapiSetGaugeParams(rightGauge, &params);
+
+    auto updateStatus = [page, vessel, leftGauge, rightGauge] {
+        const int left = static_cast<int>(std::lround(vessel->lwingstatus * 100.0));
+        const int right = static_cast<int>(std::lround(vessel->rwingstatus * 100.0));
+        if (auto *label = page->findChild<QLabel *>("IDC_LEFTWING_STATUS"))
+            label->setText(QStringLiteral("%1 %").arg(left));
+        if (auto *label = page->findChild<QLabel *>("IDC_RIGHTWING_STATUS"))
+            label->setText(QStringLiteral("%1 %").arg(right));
+        oapiSetGaugePos(leftGauge, left);
+        oapiSetGaugePos(rightGauge, right);
+    };
+    updateStatus();
+
+    QObject::connect(leftGauge, &GaugeCtrl::scrolled, page, [vessel, updateStatus](int, int position) {
+        vessel->lwingstatus = position * 0.01;
+        vessel->ApplyDamage();
+        updateStatus();
+    });
+    QObject::connect(rightGauge, &GaugeCtrl::scrolled, page, [vessel, updateStatus](int, int position) {
+        vessel->rwingstatus = position * 0.01;
+        vessel->ApplyDamage();
+        updateStatus();
+    });
+}
+
+DLLCLBK void secInit(QWidget *editor, OBJHANDLE)
+{
+    EditorPageSpec animations = {"Animations", g_hDLL, IDD_EDITOR_PG1, InitializeAnimationPage};
+    ScnEditorMsg(editor, SE_ADDPAGEBUTTON, reinterpret_cast<LPARAM>(&animations));
+    EditorPageSpec damage = {"Damage", g_hDLL, IDD_EDITOR_PG3, InitializeDamagePage};
+    ScnEditorMsg(editor, SE_ADDPAGEBUTTON, reinterpret_cast<LPARAM>(&damage));
+}
+#endif

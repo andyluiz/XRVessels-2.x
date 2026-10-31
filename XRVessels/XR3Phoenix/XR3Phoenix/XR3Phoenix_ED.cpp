@@ -30,11 +30,13 @@
 #include "ScnEditorAPI.h"
 #include "DlgCtrl.h"
 #include "XR1PayloadDialog.h"
+#include "XRControlDialog.h"
 
 // ==============================================================
 // Scenario editor interface
 // ==============================================================
 
+#ifdef _WIN32
 XR3Phoenix *GetXR3 (HWND hDlg)
 {
     // retrieve vessel interface from scenario editor
@@ -158,3 +160,45 @@ DLLCLBK void secInit (HWND hEditor, OBJHANDLE hVessel)
     EditorFuncSpec efs = { "Payload", XR1PayloadDialog::EditorFunc};
     SendMessage (hEditor, WM_SCNEDITOR, SE_ADDFUNCBUTTON, reinterpret_cast<LPARAM>(&efs));
 }
+#else
+static void InitializeAnimationPage(QWidget *page, void *context)
+{
+    auto *vessel = static_cast<XR3Phoenix *>(oapiGetVesselInterface(static_cast<OBJHANDLE>(context)));
+    if (!vessel) return;
+#define XR_ANIM(id, method, state) XRConnectDialogButton(page, #id, [vessel] { vessel->method(DoorStatus::state); })
+    XR_ANIM(IDC_GEAR_UP, ActivateLandingGear, DOOR_CLOSED);
+    XR_ANIM(IDC_GEAR_DOWN, ActivateLandingGear, DOOR_OPEN);
+    XR_ANIM(IDC_RETRO_CLOSE, ActivateRCover, DOOR_CLOSED);
+    XR_ANIM(IDC_RETRO_OPEN, ActivateRCover, DOOR_OPEN);
+    XR_ANIM(IDC_OLOCK_CLOSE, ActivateOuterAirlock, DOOR_CLOSED);
+    XR_ANIM(IDC_OLOCK_OPEN, ActivateOuterAirlock, DOOR_OPEN);
+    XR_ANIM(IDC_ILOCK_CLOSE, ActivateInnerAirlock, DOOR_CLOSED);
+    XR_ANIM(IDC_ILOCK_OPEN, ActivateInnerAirlock, DOOR_OPEN);
+    XR_ANIM(IDC_DOCKING_DEPLOY, ActivateNoseCone, DOOR_OPEN);
+    XR_ANIM(IDC_ELEVATOR_STOW, ActivateElevator, DOOR_CLOSED);
+    XR_ANIM(IDC_ELEVATOR_DEPLOY, ActivateElevator, DOOR_OPEN);
+    XR_ANIM(IDC_HATCH_CLOSE, ActivateHatch, DOOR_CLOSED);
+    XR_ANIM(IDC_HATCH_OPEN, ActivateHatch, DOOR_OPEN);
+    XR_ANIM(IDC_RADIATOR_STOW, ActivateRadiator, DOOR_CLOSED);
+    XR_ANIM(IDC_RADIATOR_DEPLOY, ActivateRadiator, DOOR_OPEN);
+    XR_ANIM(IDC_SCRAM_CLOSE, ActivateScramDoors, DOOR_CLOSED);
+    XR_ANIM(IDC_SCRAM_OPEN, ActivateScramDoors, DOOR_OPEN);
+    XR_ANIM(IDC_HOVER_CLOSE, ActivateHoverDoors, DOOR_CLOSED);
+    XR_ANIM(IDC_HOVER_OPEN, ActivateHoverDoors, DOOR_OPEN);
+    XR_ANIM(IDC_BAY_CLOSE, ActivateBayDoors, DOOR_CLOSED);
+    XR_ANIM(IDC_BAY_OPEN, ActivateBayDoors, DOOR_OPEN);
+#undef XR_ANIM
+    XRConnectDialogButton(page, "IDC_DOCKING_STOW", [vessel] {
+        vessel->ActivateOuterAirlock(DoorStatus::DOOR_CLOSED);
+        vessel->ActivateNoseCone(DoorStatus::DOOR_CLOSED);
+    });
+}
+
+DLLCLBK void secInit(QWidget *editor, OBJHANDLE)
+{
+    EditorPageSpec animations = {"Animations", g_hDLL, IDD_EDITOR_PG1, InitializeAnimationPage};
+    ScnEditorMsg(editor, SE_ADDPAGEBUTTON, reinterpret_cast<LPARAM>(&animations));
+    EditorFuncSpec payload = {"Payload", XR1PayloadDialog::EditorFunc};
+    ScnEditorMsg(editor, SE_ADDFUNCBUTTON, reinterpret_cast<LPARAM>(&payload));
+}
+#endif

@@ -31,6 +31,7 @@
 #include "XR3AreaIDs.h"
 
 #include "XR3InstrumentPanels.h"
+#include "XRResources.h"
 
 #include "XR1MainPanelAreas.h"
 #include "XR1UpperPanelAreas.h"
@@ -111,7 +112,7 @@ bool XR3MainInstrumentPanel::Activate()
     const WORD panelResourceID = GetPanelResourceID();
     
     // load our bitmap
-    m_hBmp = LoadBitmap(GetVessel().GetModuleHandle(), MAKEINTRESOURCE (panelResourceID));
+    m_hBmp = XRLoadBitmap(GetVessel().GetModuleHandle(), panelResourceID);
     if (m_hBmp == nullptr)
         return false;       // should never happen
 
@@ -154,7 +155,7 @@ bool XR3PayloadInstrumentPanel::Activate()
     const WORD panelResourceID = GetPanelResourceID();
     
     // load our bitmap
-    m_hBmp = LoadBitmap(GetVessel().GetModuleHandle(), MAKEINTRESOURCE (panelResourceID));
+    m_hBmp = XRLoadBitmap(GetVessel().GetModuleHandle(), panelResourceID);
     if (m_hBmp == nullptr)
         return false;       // should never happen
     
@@ -230,7 +231,7 @@ bool XR3OverheadInstrumentPanel::Activate()
     const WORD panelResourceID = GetPanelResourceID();
     
     // load our bitmap
-    m_hBmp = LoadBitmap(GetVessel().GetModuleHandle(), MAKEINTRESOURCE (panelResourceID));
+    m_hBmp = XRLoadBitmap(GetVessel().GetModuleHandle(), panelResourceID);
     if (m_hBmp == nullptr)
         return false;       // should never happen
     
@@ -361,7 +362,7 @@ bool XR3UpperInstrumentPanel::Activate()
     const WORD panelResourceID = GetPanelResourceID();
     
     // load our bitmap
-    m_hBmp = LoadBitmap(GetVessel().GetModuleHandle(), MAKEINTRESOURCE (panelResourceID));
+    m_hBmp = XRLoadBitmap(GetVessel().GetModuleHandle(), panelResourceID);
     if (m_hBmp == nullptr)
         return false;       // should never happen
     
@@ -388,7 +389,7 @@ bool XR3LowerInstrumentPanel::Activate()
     const WORD panelResourceID = GetPanelResourceID();
     
     // load our bitmap
-    m_hBmp = LoadBitmap(GetVessel().GetModuleHandle(), MAKEINTRESOURCE (panelResourceID));
+    m_hBmp = XRLoadBitmap(GetVessel().GetModuleHandle(), panelResourceID);
     if (m_hBmp == nullptr)
         return false;       // should never happen
 

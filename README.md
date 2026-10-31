@@ -12,7 +12,7 @@ Refer to the [XR Flight Operations Manual](./XRVessels/XR%20Flight%20Operations%
 ## Project Status
 
 - **Windows / Orbiter 2016:** The XR2 Ravenstar and XR5 Vanguard Release x86 builds have been installed and loaded successfully in a 32-bit Orbiter 2016 installation. This verifies the Windows x86 build and runtime path; x64 was not tested in that installation.
-- **Native Linux port:** Both modules compile and link, and all seven native component tests pass. XR2 and XR5 have both been tested successfully in Linux Orbiter. XR2 testing included external and internal views, panel switching, and controls.
+- **Native Linux port:** XR1, XR2, XR3, and XR5 modules compile and link, and all seven native component tests pass. XR2 and XR5 have been tested successfully in Linux Orbiter. XR2 testing included external and internal views, panel switching, and controls.
 - The XR2's proprietary meshes and textures are not included in this repository. The Windows runtime check used assets from the official XR2 Orbiter 2016 release package; the XR5 assets are included in the repository. Vessel packages and licensed XR2 assets are not added to this source tree.
 
 ## Building the XR Vessels 
@@ -21,11 +21,11 @@ You do not need to build the XR vessels in order to use them with Orbiter. Howev
 
 ### Native Linux port (in progress)
 
-The root `CMakeLists.txt` configures C++17 module targets for XR2 Ravenstar and XR5 Vanguard against a built native Linux Orbiter SDK:
+The root `CMakeLists.txt` configures C++17 module targets for XR1, XR2 Ravenstar, XR3 Phoenix, and XR5 Vanguard against a built native Linux Orbiter SDK:
 
 ```sh
 cmake -S . -B build -DORBITER_SOURCE_DIR=/path/to/orbiter -DORBITER_BUILD_DIR=/path/to/orbiter-build
-cmake --build build --target XR2Ravenstar XR5Vanguard
+cmake --build build --target DeltaGliderXR1 XR2Ravenstar XR3Phoenix XR5Vanguard
 ```
 
 The native components can be tested independently while the full vessel port is in progress:
@@ -35,11 +35,20 @@ cmake --build build --target xr_window_position_test xr_textbox_test xr_render_w
 ctest --test-dir build --output-on-failure
 ```
 
-**Both Linux targets compile and link.** The output modules are `build/Modules/XR2Ravenstar.so` and `build/Modules/XR5Vanguard.so`. Their unresolved host references were checked against the configured Linux Orbiter executable; all are exported by that executable. All seven native component tests pass, including Qt drawing and typed cache cleanup.
+**All four Linux targets compile and link.** The output modules are `build/Modules/DeltaGliderXR1.so`, `build/Modules/XR2Ravenstar.so`, `build/Modules/XR3Phoenix.so`, and `build/Modules/XR5Vanguard.so`. All seven native component tests pass, including Qt drawing and typed cache cleanup.
 
-The Linux build converts both vessels' `.rc` files with Orbiter's resource converter and links Qt Widgets. It uses native file enumeration, bitmap loading, window-position persistence, Qt-backed panel text/drawing, module-owned XR vessel detection without RTTI, and Qt control/payload/scenario-editor dialogs. The Windows x86 Release paths were also rebuilt and loaded successfully in Orbiter 2016; Windows x64 was not tested.
+The Linux build converts each vessel's `.rc` file with Orbiter's resource converter and links Qt Widgets. It uses native file enumeration, bitmap loading, window-position persistence, Qt-backed panel text/drawing, module-owned XR vessel detection without RTTI, and Qt control/payload/scenario-editor dialogs. The Windows x86 Release paths were also rebuilt and loaded successfully in Orbiter 2016; Windows x64 was not tested.
 
-**Linux runtime status:** XR2 and XR5 have both been tested successfully in Linux Orbiter. On Wayland, a compositor may ignore `QWindow::setPosition()` requests. The XR2 mesh and textures are not in this repository and have separate distribution restrictions; compiling the code alone will not make XR2 flyable. This build does not install or package the required vessel assets.
+**Linux runtime status:** XR2 and XR5 have both been tested successfully in Linux Orbiter. XR1 and XR3 now build as Linux modules but still need runtime testing. On Wayland, a compositor may ignore `QWindow::setPosition()` requests. The XR2 mesh and textures are not in this repository and have separate distribution restrictions.
+
+To create a combined Linux install archive for XR1, XR2, and XR5, first build those targets and then run:
+
+```sh
+cmake --build build --target DeltaGliderXR1 XR2Ravenstar XR5Vanguard
+./dist/package-linux.sh --build-dir build
+```
+
+The archive is written to `dist/out/linux/XRVessels-linux.tar.xz` and extracts directly into an Orbiter root. XR3 can still be built as a Linux module, but is not included in the distribution archive, matching the upstream `makedistAllVessels.bat`. XR2's proprietary meshes and textures are omitted unless you provide a local Orbiter asset root containing them with `--xr2-assets /path/to/orbiter`; do not redistribute those files without the required rights. You can select another repository asset tree with `--assets-root` and another archive location with `--output`.
 
 On Linux, the window coordinates are stored in `Config/XRWindowPosition.ini` in the Orbiter root directory (not in the registry). To prevent restoring a saved position, add `DisableWindowPosRestore=1` under `[General]` in that file. Windows continues to use its existing registry settings.
 

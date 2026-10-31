@@ -88,7 +88,7 @@ private:
 class XR3UpperInstrumentPanel : public XR3InstrumentPanel
 {
 public:
-    XR3UpperInstrumentPanel::XR3UpperInstrumentPanel(XR3Phoenix &vessel, const WORD panelResourceID) :
+    XR3UpperInstrumentPanel(XR3Phoenix &vessel, const WORD panelResourceID) :
         XR3InstrumentPanel(vessel, PANEL_UPPER, panelResourceID)
     {
     }
@@ -139,7 +139,7 @@ protected:
 class XR3PayloadInstrumentPanel1280 : public XR3PayloadInstrumentPanel
 {
 public:
-    XR3PayloadInstrumentPanel1280::XR3PayloadInstrumentPanel1280(XR3Phoenix &vessel) : 
+    XR3PayloadInstrumentPanel1280(XR3Phoenix &vessel) :
         XR3PayloadInstrumentPanel(vessel, IDB_PANEL5_1280)
     {
     }
@@ -149,7 +149,7 @@ public:
 class XR3OverheadInstrumentPanel1280 : public XR3OverheadInstrumentPanel
 {
 public:
-    XR3OverheadInstrumentPanel1280::XR3OverheadInstrumentPanel1280(XR3Phoenix &vessel) : 
+    XR3OverheadInstrumentPanel1280(XR3Phoenix &vessel) :
         XR3OverheadInstrumentPanel(vessel, IDB_PANEL4_1280)
     {
     }
@@ -188,7 +188,7 @@ public:
 class XR3PayloadInstrumentPanel1600 : public XR3PayloadInstrumentPanel
 {
 public:
-    XR3PayloadInstrumentPanel1600::XR3PayloadInstrumentPanel1600(XR3Phoenix &vessel) : 
+    XR3PayloadInstrumentPanel1600(XR3Phoenix &vessel) :
         XR3PayloadInstrumentPanel(vessel, IDB_PANEL5_1600)
     {
     }
@@ -198,7 +198,7 @@ public:
 class XR3OverheadInstrumentPanel1600 : public XR3OverheadInstrumentPanel
 {
 public:
-    XR3OverheadInstrumentPanel1600::XR3OverheadInstrumentPanel1600(XR3Phoenix &vessel) : 
+    XR3OverheadInstrumentPanel1600(XR3Phoenix &vessel) :
         XR3OverheadInstrumentPanel(vessel, IDB_PANEL4_1600)
     {
     }
@@ -238,7 +238,7 @@ public:
 class XR3PayloadInstrumentPanel1920 : public XR3PayloadInstrumentPanel
 {
 public:
-    XR3PayloadInstrumentPanel1920::XR3PayloadInstrumentPanel1920(XR3Phoenix &vessel) : 
+    XR3PayloadInstrumentPanel1920(XR3Phoenix &vessel) :
         XR3PayloadInstrumentPanel(vessel, IDB_PANEL5_1920)
     {
     }
@@ -248,7 +248,7 @@ public:
 class XR3OverheadInstrumentPanel1920 : public XR3OverheadInstrumentPanel
 {
 public:
-    XR3OverheadInstrumentPanel1920::XR3OverheadInstrumentPanel1920(XR3Phoenix &vessel) : 
+    XR3OverheadInstrumentPanel1920(XR3Phoenix &vessel) :
         XR3OverheadInstrumentPanel(vessel, IDB_PANEL4_1920)
     {
     }
@@ -278,4 +278,3 @@ class XR3LowerInstrumentPanel1920 : public XR3LowerInstrumentPanel
 public:
     XR3LowerInstrumentPanel1920(XR3Phoenix &vessel);
 };
-

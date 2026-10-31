@@ -77,5 +77,8 @@ extern const DamageItem D_END;
 // ==============================================================
 // Global callback prototypes 
 
+#ifdef _WIN32
 INT_PTR CALLBACK XR3Ctrl_DlgProc(HWND, UINT, WPARAM, LPARAM);
-
+#else
+void XR3Ctrl_DlgProc(QWidget *, void *);
+#endif

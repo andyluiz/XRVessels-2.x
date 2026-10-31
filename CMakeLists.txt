@@ -19,7 +19,7 @@ set(XR1_DIR "${CMAKE_CURRENT_SOURCE_DIR}/XRVessels/DeltaGliderXR1/DeltaGliderXR1
 # MSVC resolves these includes case-insensitively; Linux needs exact names.
 set(XR_CASE_HEADERS "${CMAKE_CURRENT_BINARY_DIR}/case-sensitive-includes")
 file(MAKE_DIRECTORY "${XR_CASE_HEADERS}")
-foreach(alias IN ITEMS DeltaGliderXR1.h:deltagliderxr1.h vessel3ext.h:Vessel3Ext.h XR1Globals.h:xr1globals.h XR1AnimationPoststep.h:XR1AnimationPostStep.h XR1Colors.h:xr1colors.h orbitersdk.h:Orbitersdk.h)
+foreach(alias IN ITEMS DeltaGliderXR1.h:deltagliderxr1.h vessel3ext.h:Vessel3Ext.h XR1Globals.h:xr1globals.h XR1AnimationPoststep.h:XR1AnimationPostStep.h XR1Colors.h:xr1colors.h orbitersdk.h:Orbitersdk.h OrbiterSDK.h:Orbitersdk.h)
     string(REPLACE ":" ";" names "${alias}")
     list(GET names 0 requested)
     list(GET names 1 actual)
@@ -101,7 +101,7 @@ file(GLOB XR_COMMON_SOURCES CONFIGURE_DEPENDS "${XR_COMMON_DIR}/*.cpp")
 set(ORBITER_SOURCE_SDK_INCLUDE_DIR "${ORBITER_SOURCE_DIR}/Orbitersdk/include")
 include("${ORBITER_SOURCE_DIR}/cmake/rcresources.cmake")
 
-foreach(vessel IN ITEMS XR2Ravenstar XR5Vanguard)
+foreach(vessel IN ITEMS DeltaGliderXR1 XR2Ravenstar XR3Phoenix XR5Vanguard)
     set(vessel_dir "${CMAKE_CURRENT_SOURCE_DIR}/XRVessels/${vessel}/${vessel}")
     file(GLOB vessel_sources CONFIGURE_DEPENDS "${vessel_dir}/*.cpp")
     add_library(${vessel} MODULE ${vessel_sources} ${XR_COMMON_SOURCES} ${XR_FRAMEWORK_SOURCES})
