@@ -12,7 +12,7 @@ Refer to the [XR Flight Operations Manual](./XRVessels/XR%20Flight%20Operations%
 ## Project Status
 
 - **Windows / Orbiter 2016:** The XR2 Ravenstar and XR5 Vanguard Release x86 builds have been installed and loaded successfully in a 32-bit Orbiter 2016 installation. This verifies the Windows x86 build and runtime path; x64 was not tested in that installation.
-- **Native Linux port:** Both modules compile and link, and all seven native component tests pass. XR2 has also been exercised in Linux Orbiter, including external and internal views, panel switching, and controls. Linux runtime testing of XR5 is still pending.
+- **Native Linux port:** Both modules compile and link, and all seven native component tests pass. XR2 and XR5 have both been tested successfully in Linux Orbiter. XR2 testing included external and internal views, panel switching, and controls.
 - The XR2's proprietary meshes and textures are not included in this repository. The Windows runtime check used assets from the official XR2 Orbiter 2016 release package; the XR5 assets are included in the repository. Vessel packages and licensed XR2 assets are not added to this source tree.
 
 ## Building the XR Vessels 
@@ -39,7 +39,7 @@ ctest --test-dir build --output-on-failure
 
 The Linux build converts both vessels' `.rc` files with Orbiter's resource converter and links Qt Widgets. It uses native file enumeration, bitmap loading, window-position persistence, Qt-backed panel text/drawing, module-owned XR vessel detection without RTTI, and Qt control/payload/scenario-editor dialogs. The Windows x86 Release paths were also rebuilt and loaded successfully in Orbiter 2016; Windows x64 was not tested.
 
-**Linux runtime status:** XR2 has been tested in Linux Orbiter; XR5 still needs its own Linux runtime test. On Wayland, a compositor may ignore `QWindow::setPosition()` requests. The XR2 mesh and textures are not in this repository and have separate distribution restrictions; compiling the code alone will not make XR2 flyable. This build does not install or package the required vessel assets.
+**Linux runtime status:** XR2 and XR5 have both been tested successfully in Linux Orbiter. On Wayland, a compositor may ignore `QWindow::setPosition()` requests. The XR2 mesh and textures are not in this repository and have separate distribution restrictions; compiling the code alone will not make XR2 flyable. This build does not install or package the required vessel assets.
 
 On Linux, the window coordinates are stored in `Config/XRWindowPosition.ini` in the Orbiter root directory (not in the registry). To prevent restoring a saved position, add `DisableWindowPosRestore=1` under `[General]` in that file. Windows continues to use its existing registry settings.
 
